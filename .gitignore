@@ -1,0 +1,5 @@
+*.pyc
+*.egg-info
+.coverage
+.mypy_cache
+.tox
