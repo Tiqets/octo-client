@@ -1,10 +1,15 @@
 from dataclasses import asdict, dataclass
-from typing import Optional
+from datetime import date, datetime
+from typing import List, Optional
 
-from dacite import from_dict
+from dacite import Config, from_dict
 
 
 class BaseModel:
+
+    @staticmethod
+    def _datetime_from_iso_format(datetime_str: str) -> datetime:
+        return datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
 
     def as_dict(self) -> dict:
         """
@@ -17,6 +22,11 @@ class BaseModel:
         """
         Populating data class from a dictionary with strict type checking.
         """
+        if config is None:
+            config = Config(type_hooks={
+                date: date.fromisoformat,
+                datetime: cls._datetime_from_iso_format,
+            })
         return from_dict(data_class=cls, data=data, config=config)
 
 
@@ -35,3 +45,166 @@ class Supplier(BaseModel):
     name: str
     endpoint: str
     contact: SupplierContact
+
+
+@dataclass
+class Capability(BaseModel):
+    id: str
+    revision: int
+    required: bool
+
+
+@dataclass
+class Unit(BaseModel):
+    id: str
+    internalName: str
+    type: str
+    reference: Optional[str] = None
+
+
+@dataclass
+class Option(BaseModel):
+    id: str
+    internalName: str
+    units: List[Unit]
+    reference: Optional[str] = None
+
+
+@dataclass
+class Product(BaseModel):
+    id: str
+    internalName: str
+    reference: str
+    locale: str
+    timeZone: str
+    instantConfirmation: bool
+    instantDelivery: bool
+    availabilityType: str
+    deliveryFormats: List[str]
+    deliveryMethods: List[str]
+    redemptionMethod: str
+    capabilities: List[Capability]
+    options: List[Option]
+
+
+@dataclass
+class DailyAvailability(BaseModel):
+    localDate: date
+    status: str
+    capacity: int
+
+
+@dataclass
+class TimeslotAvailability(BaseModel):
+    id: str
+    localDateTimeStart: datetime
+    localDateTimeEnd: datetime
+    status: str
+    vacancies: int
+    capacity: int
+    maxUnits: int
+
+
+@dataclass
+class UnitItem(BaseModel):
+    uuid: str
+    unitId: str
+    resellerReference: Optional[str] = None
+
+
+@dataclass
+class UnitQuantity(BaseModel):
+    id: str
+    quantity: int
+
+
+@dataclass
+class ReservationRequest(BaseModel):
+    uuid: str
+    productId: str
+    optionId: str
+    availabilityId: str
+    unitItems: List[UnitItem]
+    holdExpirationMinutes: Optional[int] = None
+    resellerReference: Optional[str] = None
+
+
+@dataclass
+class ReservationAvailability(BaseModel):
+    id: str
+    localStartDateTime: datetime
+    localEndDateTime: datetime
+
+
+@dataclass
+class ReservationContact(BaseModel):
+    fullName: str
+    emailAddress: str
+    phoneNumber: str
+    locales: List[str]
+    country: str
+
+
+@dataclass
+class ReservationVoucher(BaseModel):
+    deliveryFormat: str
+    deliveryValue: str
+    redemptionMethod: str
+    utcDeliveredAt: datetime
+    utcRedeemedAt: datetime
+
+
+@dataclass
+class ReservationTicket(BaseModel):
+    deliveryFormat: str
+    deliveryValue: str
+    redemptionMethod: str
+    utcDeliveredAt: datetime
+    utcRedeemedAt: datetime
+
+
+@dataclass
+class ReservationUnitItemTicket(BaseModel):
+    uuid: str
+    unitId: str
+    ticket: ReservationTicket
+    resellerReference: Optional[str] = None
+    supplierReference: Optional[str] = None
+
+
+@dataclass
+class ReservationCancellationRequest(BaseModel):
+    reason: str
+    reasonDetails: str
+    status: str
+    refund: str
+    utcRequestedAt: datetime
+    utcHoldExpiration: datetime
+    utcConfirmedAt: datetime
+    utcResolvedAt: datetime
+
+
+@dataclass
+class Reservation(BaseModel):
+    uuid: str
+    status: str
+    utcHoldExpiration: datetime
+    utcConfirmedAt: datetime
+    productId: str
+    optionId: str
+    availability: ReservationAvailability
+    contact: ReservationContact
+    deliveryMethods: List[str]
+    voucher: ReservationVoucher
+    unitItems: List[ReservationUnitItemTicket]
+    resellerReference: Optional[str]
+    supplierReference: Optional[str]
+    refreshFrequency: Optional[str]
+    cancellationRequest: Optional[ReservationCancellationRequest] = None
+
+
+@dataclass
+class ReservationConfirmationRequest(BaseModel):
+    uuid: str
+    contact: ReservationContact
+    resellerReference: Optional[str]
