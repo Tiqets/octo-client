@@ -2,6 +2,10 @@
 
 HTTP client for API standard developed by the Independent Connectivity Forum.
 
+## Installation
+
+    pip install icf-api-client
+
 ## Requirements
 
 * Python v3.7+
