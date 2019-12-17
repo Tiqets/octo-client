@@ -25,8 +25,8 @@ setup(
     ],
     python_requires='>=3.7',
     install_requires=[
-        'dacite==1.1.0',
-        'requests==2.22.0',
+        'dacite>=1.1.0',
+        'requests>=2.20.0',
     ],
     extras_require={
         'tests': [
