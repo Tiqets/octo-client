@@ -91,7 +91,6 @@ class Product(BaseModel):
 class DailyAvailability(BaseModel):
     localDate: date
     status: str
-    capacity: int
 
 
 @dataclass
