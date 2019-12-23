@@ -293,9 +293,9 @@ def test_products(client: IcfClient, mocked_responses):
 
 def test_calendar(client: IcfClient, mocked_responses):
     mocked_responses.add(responses.GET, 'http://fake-api.local/calendar', json=[
-        {'localDate': '2020-12-01', 'status': 'AVAILABLE', 'capacity': 392},
-        {'localDate': '2020-12-02', 'status': 'AVAILABLE', 'capacity': 102},
-        {'localDate': '2020-12-03', 'status': 'CLOSED', 'capacity': 0},
+        {'localDate': '2020-12-01', 'status': 'AVAILABLE'},
+        {'localDate': '2020-12-02', 'status': 'AVAILABLE'},
+        {'localDate': '2020-12-03', 'status': 'CLOSED'},
     ])
     availability = client.get_calendar(
         supplier_id='foo',
@@ -305,9 +305,9 @@ def test_calendar(client: IcfClient, mocked_responses):
         end_date=date(2020, 1, 3),
     )
     assert availability == [
-        m.DailyAvailability(localDate=date(2020, 12, 1), status='AVAILABLE', capacity=392),
-        m.DailyAvailability(localDate=date(2020, 12, 2), status='AVAILABLE', capacity=102),
-        m.DailyAvailability(localDate=date(2020, 12, 3), status='CLOSED', capacity=0),
+        m.DailyAvailability(localDate=date(2020, 12, 1), status='AVAILABLE'),
+        m.DailyAvailability(localDate=date(2020, 12, 2), status='AVAILABLE'),
+        m.DailyAvailability(localDate=date(2020, 12, 3), status='CLOSED'),
     ]
     assert len(mocked_responses.calls) == 1, 'Too many requests'
     assert mocked_responses.calls[0].request.url == (
