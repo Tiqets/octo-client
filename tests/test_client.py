@@ -5,6 +5,106 @@ import responses
 from icf_client import IcfClient
 from icf_client import models as m
 
+BOOKING_JSON = {
+    'uuid': 'f149068e-300e-452a-a856-3f091239f1d7',
+    'resellerReference': '001-002',
+    'supplierReference': 'ABC-123',
+    'status': 'ON_HOLD',
+    'utcHoldExpiration': '2019-10-31T08:30:00Z',
+    'utcConfirmedAt': '2019-10-31T08:30:00Z',
+    'utcDeliveredAt': '2019-10-31T08:30:00Z',
+    'refreshFrequency': 'HOURLY',
+    'productId': 'adult',
+    'optionId': 'LR1-01',
+    'availability': {
+        'id': '28271273-a317-40fc-8f42-79725a7072a3',
+        'localStartDateTime': '2019-10-31T08:30:00Z',
+        'localEndDateTime': '2019-10-31T10:00:00Z'
+    },
+    'contact': {
+        'fullName': 'Mr. Traveller',
+        'emailAddress': 'traveller@fake.com',
+        'phoneNumber': '+1 555-555-1212',
+        'locales': [
+            'en-GB',
+            'en-US',
+            'en'
+        ],
+        'country': 'GB'
+    },
+    'deliveryMethods': [
+        'VOUCHER'
+    ],
+    'voucher': {
+        'deliveryFormat': 'CODE39',
+        'deliveryValue': '01234567890',
+        'redemptionMethod': 'DIGITAL',
+        'utcDeliveredAt': '2019-10-31T08:30:00Z',
+        'utcRedeemedAt': '2019-10-31T08:30:00Z'
+    },
+    'unitItems': [
+        {
+            'uuid': '6be0409f-181e-4520-acc1-cc6791896859',
+            'unitId': 'adult',
+            'resellerReference': '001-002',
+            'supplierReference': 'ABC-123',
+            'ticket': {
+                'deliveryFormat': 'CODE39',
+                'deliveryValue': '01234567890',
+                'redemptionMethod': 'DIGITAL',
+                'utcDeliveredAt': '2019-10-31T08:30:00Z',
+                'utcRedeemedAt': '2019-10-31T08:30:00Z'
+            }
+        }
+    ],
+}
+BOOKING_MODEL = m.Booking(
+    uuid='f149068e-300e-452a-a856-3f091239f1d7',
+    status='ON_HOLD',
+    utcHoldExpiration=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+    utcConfirmedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+    productId='adult',
+    optionId='LR1-01',
+    availability=m.BookingAvailability(
+        id='28271273-a317-40fc-8f42-79725a7072a3',
+        localStartDateTime=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+        localEndDateTime=datetime(2019, 10, 31, 10, 0, tzinfo=timezone.utc),
+    ),
+    contact=m.BookingContact(
+        fullName='Mr. Traveller',
+        emailAddress='traveller@fake.com',
+        phoneNumber='+1 555-555-1212',
+        locales=['en-GB', 'en-US', 'en'],
+        country='GB'
+    ),
+    deliveryMethods=['VOUCHER'],
+    voucher=m.BookingVoucher(
+        deliveryFormat='CODE39',
+        deliveryValue='01234567890',
+        redemptionMethod='DIGITAL',
+        utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+        utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+    ),
+    unitItems=[
+        m.BookingUnitItemTicket(
+            uuid='6be0409f-181e-4520-acc1-cc6791896859',
+            unitId='adult',
+            ticket=m.BookingTicket(
+                deliveryFormat='CODE39',
+                deliveryValue='01234567890',
+                redemptionMethod='DIGITAL',
+                utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+                utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+            ),
+            resellerReference='001-002',
+            supplierReference='ABC-123'
+        )
+    ],
+    resellerReference='001-002',
+    supplierReference='ABC-123',
+    refreshFrequency='HOURLY',
+)
+
 
 def test_suppliers_list(client: IcfClient, mocked_responses):
     mocked_responses.add(responses.GET, 'http://fake-api.local/suppliers', json=[
@@ -200,6 +300,7 @@ def test_calendar(client: IcfClient, mocked_responses):
     availability = client.get_calendar(
         supplier_id='foo',
         product_id='bar',
+        option_id='baz',
         start_date=date(2020, 1, 1),
         end_date=date(2020, 1, 3),
     )
@@ -213,6 +314,7 @@ def test_calendar(client: IcfClient, mocked_responses):
         'http://fake-api.local/calendar'
         '?supplierId=foo'
         '&productId=bar'
+        '&optionId=baz'
         '&localDateStart=2020-01-01'
         '&localDateEnd=2020-01-03'
     )
@@ -256,7 +358,7 @@ def test_availability(client: IcfClient, mocked_responses):
         end_date=date(2020, 12, 2),
     )
     assert availability == [
-        m.TimeslotAvailability(
+        m.AvailabilityStatus(
             id='2020-12-01T09:00:00-08:00',
             localDateTimeStart=datetime(2020, 12, 1, 9, 0, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             localDateTimeEnd=datetime(2020, 12, 1, 11, 0, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
@@ -265,7 +367,7 @@ def test_availability(client: IcfClient, mocked_responses):
             capacity=11,
             maxUnits=7,
         ),
-        m.TimeslotAvailability(
+        m.AvailabilityStatus(
             id='2020-12-01T09:30:00-08:00',
             localDateTimeStart=datetime(2020, 12, 1, 9, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             localDateTimeEnd=datetime(2020, 12, 1, 11, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
@@ -274,7 +376,7 @@ def test_availability(client: IcfClient, mocked_responses):
             capacity=12,
             maxUnits=7,
         ),
-        m.TimeslotAvailability(
+        m.AvailabilityStatus(
             id='2020-12-01T10:00:00-08:00',
             localDateTimeStart=datetime(2020, 12, 1, 10, 0, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             localDateTimeEnd=datetime(2020, 12, 1, 12, 0, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
@@ -315,7 +417,7 @@ def test_test_reservation(client: IcfClient, mocked_responses):
         units=[m.UnitQuantity(id='adult', quantity=2)],
     )
     assert availability == [
-        m.TimeslotAvailability(
+        m.AvailabilityStatus(
             id='2020-12-01T15:30:00-08:00',
             localDateTimeStart=datetime(2020, 12, 1, 15, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             localDateTimeEnd=datetime(2020, 12, 1, 17, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
@@ -330,62 +432,10 @@ def test_test_reservation(client: IcfClient, mocked_responses):
 
 
 def test_reservation(client: IcfClient, mocked_responses):
-    mocked_responses.add(responses.POST, 'http://fake-api.local/reservations', json={
-        'uuid': 'f149068e-300e-452a-a856-3f091239f1d7',
-        'resellerReference': '001-002',
-        'supplierReference': 'ABC-123',
-        'status': 'ON_HOLD',
-        'utcHoldExpiration': '2019-10-31T08:30:00Z',
-        'utcConfirmedAt': '2019-10-31T08:30:00Z',
-        'utcDeliveredAt': '2019-10-31T08:30:00Z',
-        'refreshFrequency': 'HOURLY',
-        'productId': 'adult',
-        'optionId': 'LR1-01',
-        'availability': {
-            'id': '28271273-a317-40fc-8f42-79725a7072a3',
-            'localStartDateTime': '2019-10-31T08:30:00Z',
-            'localEndDateTime': '2019-10-31T10:00:00Z'
-        },
-        'contact': {
-            'fullName': 'Mr. Traveller',
-            'emailAddress': 'traveller@fake.com',
-            'phoneNumber': '+1 555-555-1212',
-            'locales': [
-                'en-GB',
-                'en-US',
-                'en'
-            ],
-            'country': 'GB'
-        },
-        'deliveryMethods': [
-            'VOUCHER'
-        ],
-        'voucher': {
-            'deliveryFormat': 'CODE39',
-            'deliveryValue': '01234567890',
-            'redemptionMethod': 'DIGITAL',
-            'utcDeliveredAt': '2019-10-31T08:30:00Z',
-            'utcRedeemedAt': '2019-10-31T08:30:00Z'
-        },
-        'unitItems': [
-            {
-                'uuid': '6be0409f-181e-4520-acc1-cc6791896859',
-                'unitId': 'adult',
-                'resellerReference': '001-002',
-                'supplierReference': 'ABC-123',
-                'ticket': {
-                    'deliveryFormat': 'CODE39',
-                    'deliveryValue': '01234567890',
-                    'redemptionMethod': 'DIGITAL',
-                    'utcDeliveredAt': '2019-10-31T08:30:00Z',
-                    'utcRedeemedAt': '2019-10-31T08:30:00Z'
-                }
-            }
-        ],
-    })
+    mocked_responses.add(responses.POST, 'http://fake-api.local/reservations', json=BOOKING_JSON)
     reservation = client.create_reservation(
         supplier_id='foo',
-        reservation_request=m.ReservationRequest(
+        booking_request=m.BookingRequest(
             uuid='f149068e-300e-452a-a856-3f091239f1d7',
             productId='adult',
             optionId='LR1-01',
@@ -398,108 +448,19 @@ def test_reservation(client: IcfClient, mocked_responses):
             ],
         ),
     )
-    assert reservation == m.Reservation(
-        uuid='f149068e-300e-452a-a856-3f091239f1d7',
-        status='ON_HOLD',
-        utcHoldExpiration=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        utcConfirmedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        productId='adult',
-        optionId='LR1-01',
-        availability=m.ReservationAvailability(
-            id='28271273-a317-40fc-8f42-79725a7072a3',
-            localStartDateTime=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-            localEndDateTime=datetime(2019, 10, 31, 10, 0, tzinfo=timezone.utc),
-        ),
-        contact=m.ReservationContact(
-            fullName='Mr. Traveller',
-            emailAddress='traveller@fake.com',
-            phoneNumber='+1 555-555-1212',
-            locales=['en-GB', 'en-US', 'en'],
-            country='GB'
-        ),
-        deliveryMethods=['VOUCHER'],
-        voucher=m.ReservationVoucher(
-            deliveryFormat='CODE39',
-            deliveryValue='01234567890',
-            redemptionMethod='DIGITAL',
-            utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-            utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        ),
-        unitItems=[
-            m.ReservationUnitItemTicket(
-                uuid='6be0409f-181e-4520-acc1-cc6791896859',
-                unitId='adult',
-                ticket=m.ReservationTicket(
-                    deliveryFormat='CODE39',
-                    deliveryValue='01234567890',
-                    redemptionMethod='DIGITAL',
-                    utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-                    utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-                ),
-                resellerReference='001-002',
-                supplierReference='ABC-123'
-            )
-        ],
-        resellerReference='001-002',
-        supplierReference='ABC-123',
-        refreshFrequency='HOURLY',
-    )
+    assert reservation == BOOKING_MODEL
     assert len(mocked_responses.calls) == 1, 'Too many requests'
     assert mocked_responses.calls[0].request.url == 'http://fake-api.local/reservations?supplierId=foo'
 
 
 def test_reservation_confirm(client: IcfClient, mocked_responses):
-    mocked_responses.add(responses.PUT, 'http://fake-api.local/reservations', json={
-        'uuid': 'f149068e-300e-452a-a856-3f091239f1d7',
-        'resellerReference': '001-002',
-        'supplierReference': 'ABC-123',
-        'status': 'ON_HOLD',
-        'utcHoldExpiration': '2019-10-31T08:30:00Z',
-        'utcConfirmedAt': '2019-10-31T08:30:00Z',
-        'utcDeliveredAt': '2019-10-31T08:30:00Z',
-        'refreshFrequency': 'HOURLY',
-        'productId': 'adult',
-        'optionId': 'LR1-01',
-        'availability': {
-            'id': '28271273-a317-40fc-8f42-79725a7072a3',
-            'localStartDateTime': '2019-10-31T08:30:00Z',
-            'localEndDateTime': '2019-10-31T10:00:00Z'
-        },
-        'contact': {
-            'fullName': 'Mr. Traveller',
-            'emailAddress': 'traveller@fake.com',
-            'phoneNumber': '+1 555-555-1212',
-            'locales': ['en-GB', 'en-US', 'en'],
-            'country': 'GB'
-        },
-        'deliveryMethods': ['VOUCHER'],
-        'voucher': {
-            'deliveryFormat': 'CODE39',
-            'deliveryValue': '01234567890',
-            'redemptionMethod': 'DIGITAL',
-            'utcDeliveredAt': '2019-10-31T08:30:00Z',
-            'utcRedeemedAt': '2019-10-31T08:30:00Z'
-        },
-        'unitItems': [{
-            'uuid': '6be0409f-181e-4520-acc1-cc6791896859',
-            'unitId': 'adult',
-            'resellerReference': '001-002',
-            'supplierReference': 'ABC-123',
-            'ticket': {
-                'deliveryFormat': 'CODE39',
-                'deliveryValue': '01234567890',
-                'redemptionMethod': 'DIGITAL',
-                'utcDeliveredAt': '2019-10-31T08:30:00Z',
-                'utcRedeemedAt': '2019-10-31T08:30:00Z'
-            }
-        }],
-    })
+    mocked_responses.add(responses.PUT, 'http://fake-api.local/reservations', json=BOOKING_JSON)
     reservation = client.confirm_reservation(
         supplier_id='foo',
-        confirmation_request=m.ReservationConfirmationRequest(
+        confirmation_request=m.BookingConfirmationRequest(
             uuid='7df49d62-57ad-44be-8373-e4c2fe7e63fe',
             resellerReference='001-002',
-            contact=m.ReservationContact(
+            contact=m.BookingContact(
                 fullName='Mr. Traveller',
                 emailAddress='traveller@fake.local',
                 phoneNumber='+1 555-555-1212',
@@ -508,50 +469,21 @@ def test_reservation_confirm(client: IcfClient, mocked_responses):
             )
         )
     )
-    assert reservation == m.Reservation(
-        uuid='f149068e-300e-452a-a856-3f091239f1d7',
-        status='ON_HOLD',
-        utcHoldExpiration=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        utcConfirmedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        productId='adult',
-        optionId='LR1-01',
-        availability=m.ReservationAvailability(
-            id='28271273-a317-40fc-8f42-79725a7072a3',
-            localStartDateTime=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-            localEndDateTime=datetime(2019, 10, 31, 10, 0, tzinfo=timezone.utc),
-        ),
-        contact=m.ReservationContact(
-            fullName='Mr. Traveller',
-            emailAddress='traveller@fake.com',
-            phoneNumber='+1 555-555-1212',
-            locales=['en-GB', 'en-US', 'en'],
-            country='GB'
-        ),
-        deliveryMethods=['VOUCHER'],
-        voucher=m.ReservationVoucher(
-            deliveryFormat='CODE39',
-            deliveryValue='01234567890',
-            redemptionMethod='DIGITAL',
-            utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-            utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        ),
-        unitItems=[
-            m.ReservationUnitItemTicket(
-                uuid='6be0409f-181e-4520-acc1-cc6791896859',
-                unitId='adult',
-                ticket=m.ReservationTicket(
-                    deliveryFormat='CODE39',
-                    deliveryValue='01234567890',
-                    redemptionMethod='DIGITAL',
-                    utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-                    utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-                ),
-                resellerReference='001-002',
-                supplierReference='ABC-123'
-            )
-        ],
-        resellerReference='001-002',
-        supplierReference='ABC-123',
-        refreshFrequency='HOURLY',
-        cancellationRequest=None
+    assert reservation == BOOKING_MODEL
+    assert len(mocked_responses.calls) == 1, 'Too many requests'
+    assert mocked_responses.calls[0].request.url == 'http://fake-api.local/reservations?supplierId=foo'
+
+
+def test_booking_details(client: IcfClient, mocked_responses):
+    mocked_responses.add(responses.GET, 'http://fake-api.local/bookings', json=BOOKING_JSON)
+    reservation = client.get_booking_details(
+        supplier_id='foo',
+        uuid='f149068e-300e-452a-a856-3f091239f1d7'
+    )
+    assert reservation == BOOKING_MODEL
+    assert len(mocked_responses.calls) == 1, 'Too many requests'
+    assert mocked_responses.calls[0].request.url == (
+        'http://fake-api.local/bookings'
+        '?supplierId=foo'
+        '&uuid=f149068e-300e-452a-a856-3f091239f1d7'
     )

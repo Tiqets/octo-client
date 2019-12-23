@@ -9,7 +9,7 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='ICF API client',
-    version='0.0.2',
+    version='0.0.3',
     description='HTTP client for API standard developed by the Independent Connectivity Forum.',
     long_description=long_description,
     long_description_content_type='text/markdown',
