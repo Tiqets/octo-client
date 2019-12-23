@@ -7,6 +7,7 @@ import requests
 from icf_client import exceptions, models
 
 logger = logging.getLogger('icf_client')
+logger.setLevel(logging.INFO)
 
 
 class IcfClient(object):
@@ -59,7 +60,7 @@ class IcfClient(object):
         '''
         response = self._http_get('suppliers')
         suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
-        logger.debug('Found %s suppliers', len(suppliers))
+        logger.info('Found %s suppliers', len(suppliers))
         return suppliers
 
     def get_products(self, supplier_id: str) -> List[models.Product]:
@@ -68,24 +69,26 @@ class IcfClient(object):
         '''
         response = self._http_get('products', params={'supplierId': supplier_id})
         products = [models.Product.from_dict(product) for product in response]
-        logger.debug('Found %s products', len(products))
+        logger.info('Found %s products', len(products))
         return products
 
     def get_calendar(
         self,
         supplier_id: str,
         product_id: str,
+        option_id: str,
         start_date: date,
         end_date: date
     ) -> List[models.DailyAvailability]:
         response = self._http_get('calendar', params={
             'supplierId': supplier_id,
             'productId': product_id,
+            'optionId': option_id,
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
         })
         daily_availability = [models.DailyAvailability.from_dict(availability) for availability in response]
-        logger.debug('Found %s days', len(daily_availability))
+        logger.info('Found %s days', len(daily_availability))
         return daily_availability
 
     def get_availability(
@@ -95,7 +98,7 @@ class IcfClient(object):
         option_id: str,
         start_date: date,
         end_date: date,
-    ) -> List[models.TimeslotAvailability]:
+    ) -> List[models.AvailabilityStatus]:
         '''
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
 
@@ -104,7 +107,7 @@ class IcfClient(object):
         (e.g. the supplier is open 8-5 but closed for lunch from 12-1) then one availability object
         MUST be returned for each contiguous range of time for that day.
 
-        The availability id value MUST be sent when making a Reservation request.
+        The availability id value MUST be sent when making a Booking request.
 
         The status field SHOULD be used to infer how frequently your cache should be updated from
         the Booking Platform. The RECOMMENDED frequency is as follows:
@@ -126,8 +129,8 @@ class IcfClient(object):
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
         })
-        detailed_availability = [models.TimeslotAvailability.from_dict(availability) for availability in response]
-        logger.debug('Found %s items', len(detailed_availability))
+        detailed_availability = [models.AvailabilityStatus.from_dict(availability) for availability in response]
+        logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
 
     def test_reservation(
@@ -137,11 +140,11 @@ class IcfClient(object):
         option_id: str,
         availability_ids: List[str],
         units: List[models.UnitQuantity],
-    ) -> List[models.TimeslotAvailability]:
+    ) -> List[models.AvailabilityStatus]:
         '''
         This request is intended to provide the Booking Platform a complete view of the Unit IDs,
         Unit quantity, and Availability IDs so that additional restrictions and policies can be
-        validated within the Booking Platform prior to making a Reservation. The purpose is to
+        validated within the Booking Platform prior to making a Booking. The purpose is to
         provide a clear and accurate answer to the Reseller about whether the requested booking
         configuration could be accepted by the Supplier. This is to support complex booking
         requirements without the Reseller needing to know the details of the restriction
@@ -153,31 +156,31 @@ class IcfClient(object):
             'availabilityIds': availability_ids,
             'units': [unit.as_dict() for unit in units],
         })
-        detailed_availability = [models.TimeslotAvailability.from_dict(availability) for availability in response]
-        logger.debug('Found %s items', len(detailed_availability))
+        detailed_availability = [models.AvailabilityStatus.from_dict(availability) for availability in response]
+        logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
 
     def create_reservation(
         self,
         supplier_id: str,
-        reservation_request: models.ReservationRequest,
-    ) -> models.Reservation:
+        booking_request: models.BookingRequest,
+    ) -> models.Booking:
         '''
         This creates a new booking reservation.
         '''
         response = self._http_post(
             'reservations',
             params={'supplierId': supplier_id},
-            json=reservation_request.as_dict(),
+            json=booking_request.as_dict(),
         )
-        logger.debug('Reservation created')
-        return models.Reservation.from_dict(response)
+        logger.info('Booking created')
+        return models.Booking.from_dict(response)
 
     def confirm_reservation(
         self,
         supplier_id: str,
-        confirmation_request: models.ReservationConfirmationRequest,
-    ) -> models.Reservation:
+        confirmation_request: models.BookingConfirmationRequest,
+    ) -> models.Booking:
         '''
         This confirms an existing reservation. The utcHoldExpiration MUST NOT be elapsed when this request
         is sent, otherwise the response MAY show a status of EXPIRED.
@@ -187,5 +190,21 @@ class IcfClient(object):
             params={'supplierId': supplier_id},
             json=confirmation_request.as_dict(),
         )
-        logger.debug('Reservation confirmed')
-        return models.Reservation.from_dict(response)
+        logger.info('Booking confirmed')
+        return models.Booking.from_dict(response)
+
+    def get_booking_details(self, supplier_id: str, uuid: str) -> models.Booking:
+        '''
+        This returns the current state of any valid booking. This request MAY be made at any point after
+        the initial createReservation request is processed successfully and it MUST return the booking
+        reservation object.
+        '''
+        response = self._http_get(
+            'bookings',
+            params={
+                'supplierId': supplier_id,
+                'uuid': uuid,
+            }
+        )
+        logger.info('Got booking details')
+        return models.Booking.from_dict(response)

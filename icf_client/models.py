@@ -95,7 +95,7 @@ class DailyAvailability(BaseModel):
 
 
 @dataclass
-class TimeslotAvailability(BaseModel):
+class AvailabilityStatus(BaseModel):
     id: str
     localDateTimeStart: datetime
     localDateTimeEnd: datetime
@@ -119,7 +119,7 @@ class UnitQuantity(BaseModel):
 
 
 @dataclass
-class ReservationRequest(BaseModel):
+class BookingRequest(BaseModel):
     uuid: str
     productId: str
     optionId: str
@@ -130,14 +130,14 @@ class ReservationRequest(BaseModel):
 
 
 @dataclass
-class ReservationAvailability(BaseModel):
+class BookingAvailability(BaseModel):
     id: str
     localStartDateTime: datetime
     localEndDateTime: datetime
 
 
 @dataclass
-class ReservationContact(BaseModel):
+class BookingContact(BaseModel):
     fullName: str
     emailAddress: str
     phoneNumber: str
@@ -146,7 +146,7 @@ class ReservationContact(BaseModel):
 
 
 @dataclass
-class ReservationVoucher(BaseModel):
+class BookingVoucher(BaseModel):
     deliveryFormat: str
     deliveryValue: str
     redemptionMethod: str
@@ -155,7 +155,7 @@ class ReservationVoucher(BaseModel):
 
 
 @dataclass
-class ReservationTicket(BaseModel):
+class BookingTicket(BaseModel):
     deliveryFormat: str
     deliveryValue: str
     redemptionMethod: str
@@ -164,16 +164,16 @@ class ReservationTicket(BaseModel):
 
 
 @dataclass
-class ReservationUnitItemTicket(BaseModel):
+class BookingUnitItemTicket(BaseModel):
     uuid: str
     unitId: str
-    ticket: ReservationTicket
+    ticket: BookingTicket
     resellerReference: Optional[str] = None
     supplierReference: Optional[str] = None
 
 
 @dataclass
-class ReservationCancellationRequest(BaseModel):
+class BookingCancellationRequest(BaseModel):
     reason: str
     reasonDetails: str
     status: str
@@ -185,26 +185,26 @@ class ReservationCancellationRequest(BaseModel):
 
 
 @dataclass
-class Reservation(BaseModel):
+class Booking(BaseModel):
     uuid: str
     status: str
     utcHoldExpiration: datetime
     utcConfirmedAt: datetime
     productId: str
     optionId: str
-    availability: ReservationAvailability
-    contact: ReservationContact
+    availability: BookingAvailability
+    contact: BookingContact
     deliveryMethods: List[str]
-    voucher: ReservationVoucher
-    unitItems: List[ReservationUnitItemTicket]
+    voucher: BookingVoucher
+    unitItems: List[BookingUnitItemTicket]
     resellerReference: Optional[str]
     supplierReference: Optional[str]
     refreshFrequency: Optional[str]
-    cancellationRequest: Optional[ReservationCancellationRequest] = None
+    cancellationRequest: Optional[BookingCancellationRequest] = None
 
 
 @dataclass
-class ReservationConfirmationRequest(BaseModel):
+class BookingConfirmationRequest(BaseModel):
     uuid: str
-    contact: ReservationContact
+    contact: BookingContact
     resellerReference: Optional[str]
