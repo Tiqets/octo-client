@@ -102,7 +102,7 @@ class IcfClient(object):
         '''
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
 
-        If the product's availabilityType is OPENING_HOURS then the localStartDateTime and localEndDateTime
+        If the product's availabilityType is OPENING_HOURS then the localDateTimeStart and localDateTimeEnd
         are the hours of operation. If a product has more than one hours of operation on the same day
         (e.g. the supplier is open 8-5 but closed for lunch from 12-1) then one availability object
         MUST be returned for each contiguous range of time for that day.

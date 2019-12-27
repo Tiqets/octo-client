@@ -18,8 +18,8 @@ BOOKING_JSON = {
     'optionId': 'LR1-01',
     'availability': {
         'id': '28271273-a317-40fc-8f42-79725a7072a3',
-        'localStartDateTime': '2019-10-31T08:30:00Z',
-        'localEndDateTime': '2019-10-31T10:00:00Z'
+        'localDateTimeStart': '2019-10-31T08:30:00Z',
+        'localDateTimeEnd': '2019-10-31T10:00:00Z'
     },
     'contact': {
         'fullName': 'Mr. Traveller',
@@ -67,8 +67,8 @@ BOOKING_MODEL = m.Booking(
     optionId='LR1-01',
     availability=m.BookingAvailability(
         id='28271273-a317-40fc-8f42-79725a7072a3',
-        localStartDateTime=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        localEndDateTime=datetime(2019, 10, 31, 10, 0, tzinfo=timezone.utc),
+        localDateTimeStart=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
+        localDateTimeEnd=datetime(2019, 10, 31, 10, 0, tzinfo=timezone.utc),
     ),
     contact=m.BookingContact(
         fullName='Mr. Traveller',
