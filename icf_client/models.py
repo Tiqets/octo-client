@@ -147,9 +147,14 @@ class BookingContact(BaseModel):
 
 
 @dataclass
+class DeliveryOption(BaseModel):
+    deliveryFormat: str
+    deliveryValue: str
+
+
+@dataclass
 class BookingVoucher(BaseModel):
-    deliveryFormat: Optional[str]
-    deliveryValue: Optional[str]
+    deliveryOptions: List[DeliveryOption]
     redemptionMethod: str
     utcDeliveredAt: Optional[datetime]
     utcRedeemedAt: Optional[datetime]
@@ -157,8 +162,7 @@ class BookingVoucher(BaseModel):
 
 @dataclass
 class BookingTicket(BaseModel):
-    deliveryFormat: Optional[str]
-    deliveryValue: Optional[str]
+    deliveryOptions: List[DeliveryOption]
     redemptionMethod: str
     utcDeliveredAt: Optional[datetime]
     utcRedeemedAt: Optional[datetime]
@@ -206,6 +210,5 @@ class Booking(BaseModel):
 
 @dataclass
 class BookingConfirmationRequest(BaseModel):
-    uuid: str
     contact: BookingContact
     resellerReference: Optional[str]
