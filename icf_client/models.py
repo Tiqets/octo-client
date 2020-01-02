@@ -8,8 +8,10 @@ from dacite import Config, from_dict
 class BaseModel:
 
     @staticmethod
-    def _datetime_from_iso_format(datetime_str: str) -> datetime:
-        return datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+    def _datetime_from_iso_format(datetime_str: Optional[str]) -> Optional[datetime]:
+        if datetime_str:
+            return datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+        return None
 
     def as_dict(self) -> dict:
         """
@@ -131,40 +133,44 @@ class BookingRequest(BaseModel):
 @dataclass
 class BookingAvailability(BaseModel):
     id: str
-    localStartDateTime: datetime
-    localEndDateTime: datetime
+    localDateTimeStart: datetime
+    localDateTimeEnd: datetime
 
 
 @dataclass
 class BookingContact(BaseModel):
-    fullName: str
-    emailAddress: str
-    phoneNumber: str
+    fullName: Optional[str]
+    emailAddress: Optional[str]
+    phoneNumber: Optional[str]
     locales: List[str]
-    country: str
+    country: Optional[str]
+
+
+@dataclass
+class DeliveryOption(BaseModel):
+    deliveryFormat: str
+    deliveryValue: str
 
 
 @dataclass
 class BookingVoucher(BaseModel):
-    deliveryFormat: str
-    deliveryValue: str
+    deliveryOptions: List[DeliveryOption]
     redemptionMethod: str
-    utcDeliveredAt: datetime
-    utcRedeemedAt: datetime
+    utcDeliveredAt: Optional[datetime]
+    utcRedeemedAt: Optional[datetime]
 
 
 @dataclass
 class BookingTicket(BaseModel):
-    deliveryFormat: str
-    deliveryValue: str
+    deliveryOptions: List[DeliveryOption]
     redemptionMethod: str
-    utcDeliveredAt: datetime
-    utcRedeemedAt: datetime
+    utcDeliveredAt: Optional[datetime]
+    utcRedeemedAt: Optional[datetime]
 
 
 @dataclass
 class BookingUnitItemTicket(BaseModel):
-    uuid: str
+    uuid: Optional[str]
     unitId: str
     ticket: BookingTicket
     resellerReference: Optional[str] = None
@@ -178,17 +184,17 @@ class BookingCancellationRequest(BaseModel):
     status: str
     refund: str
     utcRequestedAt: datetime
-    utcHoldExpiration: datetime
-    utcConfirmedAt: datetime
-    utcResolvedAt: datetime
+    utcHoldExpiration: Optional[datetime]
+    utcConfirmedAt: Optional[datetime]
+    utcResolvedAt: Optional[datetime]
 
 
 @dataclass
 class Booking(BaseModel):
     uuid: str
     status: str
-    utcHoldExpiration: datetime
-    utcConfirmedAt: datetime
+    utcHoldExpiration: Optional[datetime]
+    utcConfirmedAt: Optional[datetime]
     productId: str
     optionId: str
     availability: BookingAvailability
@@ -204,6 +210,5 @@ class Booking(BaseModel):
 
 @dataclass
 class BookingConfirmationRequest(BaseModel):
-    uuid: str
     contact: BookingContact
     resellerReference: Optional[str]

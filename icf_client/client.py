@@ -15,9 +15,14 @@ class IcfClient(object):
     HTTP client for API standard developed by the Independent Connectivity Forum.
     """
 
-    def __init__(self, url: str, token: str) -> None:
+    def __init__(self, url: str, token: str, custom_logger: logging.Logger = None) -> None:
         self.url = url.rstrip('/')
         self.token = token
+        self.logger = custom_logger or logger
+        self.suppliers: List[models.Supplier] = self.get_suppliers()
+        self.supplier_url_map = {
+            supplier.id: supplier.endpoint for supplier in self.suppliers
+        }
 
     @staticmethod
     def _raise_for_status(status_code: int, response_content: str) -> None:
@@ -31,8 +36,15 @@ class IcfClient(object):
             raise CODE_EXCEPTION_MAP[status_code](response_content)
 
     def _make_request(self, http_method: Callable, path: str, json=None, params=None):
-        full_url = f'{self.url}/{path}'
-        logger.debug('%s %s', http_method.__name__.upper(), full_url)
+        if params and 'supplierId' in params:
+            try:
+                endpoint_url = self.supplier_url_map[params['supplierId']]
+            except KeyError:
+                raise exceptions.InvalidRequest('Incorrect supplierId')
+            full_url = f'{endpoint_url}/{path}'
+        else:
+            full_url = f'{self.url}/{path}'
+        self.logger.debug('%s %s', http_method.__name__.upper(), full_url)
         response = http_method(
             full_url,
             params=params or {},
@@ -51,16 +63,13 @@ class IcfClient(object):
     def _http_post(self, path: str, json: dict, params=None):
         return self._make_request(requests.post, path, json=json, params=params)
 
-    def _http_put(self, path: str, json: dict, params=None):
-        return self._make_request(requests.put, path, json=json, params=params)
-
     def get_suppliers(self) -> List[models.Supplier]:
         '''
         This list MAY be limited based on the suppliers that the authenticated user has been granted access to.
         '''
         response = self._http_get('suppliers')
         suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
-        logger.info('Found %s suppliers', len(suppliers))
+        self.logger.info('Found %s suppliers', len(suppliers), extra={'suppliers': response})
         return suppliers
 
     def get_products(self, supplier_id: str) -> List[models.Product]:
@@ -69,7 +78,7 @@ class IcfClient(object):
         '''
         response = self._http_get('products', params={'supplierId': supplier_id})
         products = [models.Product.from_dict(product) for product in response]
-        logger.info('Found %s products', len(products))
+        self.logger.info('Found %s products', len(products), extra={'products': products})
         return products
 
     def get_calendar(
@@ -80,7 +89,7 @@ class IcfClient(object):
         start_date: date,
         end_date: date
     ) -> List[models.DailyAvailability]:
-        response = self._http_get('calendar', params={
+        response = self._http_get('availability/calendar', params={
             'supplierId': supplier_id,
             'productId': product_id,
             'optionId': option_id,
@@ -88,7 +97,7 @@ class IcfClient(object):
             'localDateEnd': end_date.isoformat(),
         })
         daily_availability = [models.DailyAvailability.from_dict(availability) for availability in response]
-        logger.info('Found %s days', len(daily_availability))
+        self.logger.info('Found %s days', len(daily_availability), extra={'calendar': response})
         return daily_availability
 
     def get_availability(
@@ -102,7 +111,7 @@ class IcfClient(object):
         '''
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
 
-        If the product's availabilityType is OPENING_HOURS then the localStartDateTime and localEndDateTime
+        If the product's availabilityType is OPENING_HOURS then the localDateTimeStart and localDateTimeEnd
         are the hours of operation. If a product has more than one hours of operation on the same day
         (e.g. the supplier is open 8-5 but closed for lunch from 12-1) then one availability object
         MUST be returned for each contiguous range of time for that day.
@@ -130,7 +139,7 @@ class IcfClient(object):
             'localDateEnd': end_date.isoformat(),
         })
         detailed_availability = [models.AvailabilityStatus.from_dict(availability) for availability in response]
-        logger.info('Found %s items', len(detailed_availability))
+        self.logger.info('Found %s items', len(detailed_availability), extra={'availability': response})
         return detailed_availability
 
     def test_reservation(
@@ -157,7 +166,7 @@ class IcfClient(object):
             'units': [unit.as_dict() for unit in units],
         })
         detailed_availability = [models.AvailabilityStatus.from_dict(availability) for availability in response]
-        logger.info('Found %s items', len(detailed_availability))
+        self.logger.info('Found %s items', len(detailed_availability), extra={'availability': response})
         return detailed_availability
 
     def create_reservation(
@@ -169,28 +178,29 @@ class IcfClient(object):
         This creates a new booking reservation.
         '''
         response = self._http_post(
-            'reservations',
+            'bookings',
             params={'supplierId': supplier_id},
             json=booking_request.as_dict(),
         )
-        logger.info('Booking created')
+        self.logger.info('Booking created', extra={'booking': response})
         return models.Booking.from_dict(response)
 
     def confirm_reservation(
         self,
         supplier_id: str,
+        uuid: str,
         confirmation_request: models.BookingConfirmationRequest,
     ) -> models.Booking:
         '''
         This confirms an existing reservation. The utcHoldExpiration MUST NOT be elapsed when this request
         is sent, otherwise the response MAY show a status of EXPIRED.
         '''
-        response = self._http_put(
-            'reservations',
+        response = self._http_post(
+            f'bookings/{uuid}/confirm',
             params={'supplierId': supplier_id},
             json=confirmation_request.as_dict(),
         )
-        logger.info('Booking confirmed')
+        self.logger.info('Booking confirmed', extra={'booking': response})
         return models.Booking.from_dict(response)
 
     def get_booking_details(self, supplier_id: str, uuid: str) -> models.Booking:
@@ -200,11 +210,8 @@ class IcfClient(object):
         reservation object.
         '''
         response = self._http_get(
-            'bookings',
-            params={
-                'supplierId': supplier_id,
-                'uuid': uuid,
-            }
+            f'bookings/{uuid}',
+            params={'supplierId': supplier_id},
         )
-        logger.info('Got booking details')
+        self.logger.info('Got booking details', extra={'booking': response})
         return models.Booking.from_dict(response)
