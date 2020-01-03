@@ -19,10 +19,8 @@ class IcfClient(object):
         self.url = url.rstrip('/')
         self.token = token
         self.logger = custom_logger or logger
-        self.suppliers: List[models.Supplier] = self.get_suppliers()
-        self.supplier_url_map = {
-            supplier.id: supplier.endpoint for supplier in self.suppliers
-        }
+        self.suppliers: List[models.Supplier] = []
+        self.supplier_url_map: Dict[str, str] = {}
 
     @staticmethod
     def _raise_for_status(status_code: int, response_content: str) -> None:
@@ -37,6 +35,8 @@ class IcfClient(object):
 
     def _make_request(self, http_method: Callable, path: str, json=None, params=None):
         if params and 'supplierId' in params:
+            if not self.suppliers:
+                self.get_suppliers()
             try:
                 endpoint_url = self.supplier_url_map[params['supplierId']]
             except KeyError:
@@ -68,9 +68,12 @@ class IcfClient(object):
         This list MAY be limited based on the suppliers that the authenticated user has been granted access to.
         '''
         response = self._http_get('suppliers')
-        suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
-        self.logger.info('Found %s suppliers', len(suppliers), extra={'suppliers': response})
-        return suppliers
+        self.suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
+        self.logger.info('Found %s suppliers', len(self.suppliers), extra={'suppliers': response})
+        self.supplier_url_map = {
+            supplier.id: supplier.endpoint for supplier in self.suppliers
+        }
+        return self.suppliers
 
     def get_products(self, supplier_id: str) -> List[models.Product]:
         '''

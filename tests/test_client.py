@@ -118,6 +118,7 @@ BOOKING_MODEL = m.Booking(
 
 
 def test_suppliers_list(client: IcfClient, mocked_responses):
+    client.get_suppliers()
     assert client.suppliers == [
         m.Supplier(
             id='0001',
