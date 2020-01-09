@@ -4,15 +4,15 @@ from typing import Callable, Dict, List
 
 import requests
 
-from icf_client import exceptions, models
+from octo_client import exceptions, models
 
-logger = logging.getLogger('icf_client')
+logger = logging.getLogger('octo_client')
 logger.setLevel(logging.INFO)
 
 
-class IcfClient(object):
+class OctoClient(object):
     """
-    HTTP client for API standard developed by the Independent Connectivity Forum.
+    HTTP client for OCTO (Open Connection for Tourism) APIs.
     """
 
     def __init__(self, url: str, token: str, custom_logger: logging.Logger = None) -> None:

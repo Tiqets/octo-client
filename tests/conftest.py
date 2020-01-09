@@ -1,7 +1,7 @@
 import pytest
 import responses
 
-from icf_client import IcfClient
+from octo_client import OctoClient
 
 
 @pytest.fixture
@@ -25,4 +25,4 @@ def client(mocked_responses):
             }
         }
     ])
-    return IcfClient('http://fake-api.local', 'bar')
+    return OctoClient('http://fake-api.local', 'bar')

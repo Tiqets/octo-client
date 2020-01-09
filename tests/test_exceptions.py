@@ -1,7 +1,7 @@
 import pytest
 import responses
 
-from icf_client import exceptions
+from octo_client import exceptions
 
 
 def test_incorrect_supplier_id(client, mocked_responses):

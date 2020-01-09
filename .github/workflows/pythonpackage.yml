@@ -26,7 +26,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --cov=icf_client --cov-report=term --cov-report=xml
+        pytest --cov=octo_client --cov-report=term --cov-report=xml
 
     - name: Lint with flake8
       run: |

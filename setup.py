@@ -8,9 +8,9 @@ with open(path.join(here, 'README.md')) as f:
     long_description = f.read()
 
 setup(
-    name='ICF API client',
-    version='0.0.7',
-    description='HTTP client for API standard developed by the Independent Connectivity Forum.',
+    name='OCTO-API-client',
+    version='0.1.0',
+    description='HTTP client for OCTO (Open Connection for Tourism) APIs.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=find_packages(exclude=['tests*']),
