@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 
-from .client import IcfClient
+from .client import OctoClient
 
 __all__: Sequence[Any] = (
-    IcfClient,
+    OctoClient,
 )

@@ -3,8 +3,8 @@ import json
 
 import responses
 
-from icf_client import IcfClient
-from icf_client import models as m
+from octo_client import OctoClient
+from octo_client import models as m
 
 BOOKING_JSON = {
     'uuid': 'f149068e-300e-452a-a856-3f091239f1d7',
@@ -117,7 +117,7 @@ BOOKING_MODEL = m.Booking(
 )
 
 
-def test_suppliers_list(client: IcfClient, mocked_responses):
+def test_suppliers_list(client: OctoClient, mocked_responses):
     client.get_suppliers()
     assert client.suppliers == [
         m.Supplier(
@@ -141,7 +141,7 @@ def test_suppliers_list(client: IcfClient, mocked_responses):
     assert mocked_responses.calls[0].request.headers['Authorization'] == 'Bearer bar'
 
 
-def test_products(client: IcfClient, mocked_responses):
+def test_products(client: OctoClient, mocked_responses):
     mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/products', json=[
         {
             'id': 'a491687f-1dce-4be2-bc47-0157541bc8c1',
@@ -292,7 +292,7 @@ def test_products(client: IcfClient, mocked_responses):
     )
 
 
-def test_calendar(client: IcfClient, mocked_responses):
+def test_calendar(client: OctoClient, mocked_responses):
     mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/availability/calendar', json=[
         {'localDate': '2020-12-01', 'status': 'AVAILABLE'},
         {'localDate': '2020-12-02', 'status': 'AVAILABLE'},
@@ -321,7 +321,7 @@ def test_calendar(client: IcfClient, mocked_responses):
     )
 
 
-def test_availability(client: IcfClient, mocked_responses):
+def test_availability(client: OctoClient, mocked_responses):
     mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/availability', json=[
         {
             'id': '2020-12-01T09:00:00-08:00',
@@ -398,7 +398,7 @@ def test_availability(client: IcfClient, mocked_responses):
     )
 
 
-def test_test_reservation(client: IcfClient, mocked_responses):
+def test_test_reservation(client: OctoClient, mocked_responses):
     mocked_responses.add(responses.POST, 'https://api.my-booking-platform.com/v1/availability', json=[
         {
             'id': '2020-12-01T15:30:00-08:00',
@@ -445,7 +445,7 @@ def test_test_reservation(client: IcfClient, mocked_responses):
     }
 
 
-def test_create_reservation(client: IcfClient, mocked_responses):
+def test_create_reservation(client: OctoClient, mocked_responses):
     mocked_responses.add(responses.POST, 'https://api.my-booking-platform.com/v1/bookings', json=BOOKING_JSON)
     reservation = client.create_reservation(
         supplier_id='0001',
@@ -484,7 +484,7 @@ def test_create_reservation(client: IcfClient, mocked_responses):
     }
 
 
-def test_reservation_confirmation(client: IcfClient, mocked_responses):
+def test_reservation_confirmation(client: OctoClient, mocked_responses):
     mocked_responses.add(
         responses.POST,
         'https://api.my-booking-platform.com/v1/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe/confirm',
@@ -523,7 +523,7 @@ def test_reservation_confirmation(client: IcfClient, mocked_responses):
     }
 
 
-def test_booking_details(client: IcfClient, mocked_responses):
+def test_booking_details(client: OctoClient, mocked_responses):
     mocked_responses.add(
         responses.GET,
         'https://api.my-booking-platform.com/v1/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe',

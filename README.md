@@ -1,10 +1,10 @@
-# ICF API client
+# OCTO API client
 
-HTTP client for API standard developed by the Independent Connectivity Forum.
+Python HTTP client for OCTO (Open Connection for Tourism) APIs.
 
 ## Installation
 
-    pip install icf-api-client
+    pip install octo-api-client
 
 ## Requirements
 
