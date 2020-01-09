@@ -139,11 +139,11 @@ class BookingAvailability(BaseModel):
 
 @dataclass
 class BookingContact(BaseModel):
-    fullName: Optional[str]
-    emailAddress: Optional[str]
-    phoneNumber: Optional[str]
     locales: List[str]
-    country: Optional[str]
+    fullName: Optional[str] = None
+    emailAddress: Optional[str] = None
+    phoneNumber: Optional[str] = None
+    country: Optional[str] = None
 
 
 @dataclass
@@ -156,23 +156,23 @@ class DeliveryOption(BaseModel):
 class BookingVoucher(BaseModel):
     deliveryOptions: List[DeliveryOption]
     redemptionMethod: str
-    utcDeliveredAt: Optional[datetime]
-    utcRedeemedAt: Optional[datetime]
+    utcDeliveredAt: Optional[datetime] = None
+    utcRedeemedAt: Optional[datetime] = None
 
 
 @dataclass
 class BookingTicket(BaseModel):
     deliveryOptions: List[DeliveryOption]
     redemptionMethod: str
-    utcDeliveredAt: Optional[datetime]
-    utcRedeemedAt: Optional[datetime]
+    utcDeliveredAt: Optional[datetime] = None
+    utcRedeemedAt: Optional[datetime] = None
 
 
 @dataclass
 class BookingUnitItemTicket(BaseModel):
-    uuid: Optional[str]
     unitId: str
     ticket: BookingTicket
+    uuid: Optional[str] = None
     resellerReference: Optional[str] = None
     supplierReference: Optional[str] = None
 
@@ -184,31 +184,31 @@ class BookingCancellationRequest(BaseModel):
     status: str
     refund: str
     utcRequestedAt: datetime
-    utcHoldExpiration: Optional[datetime]
-    utcConfirmedAt: Optional[datetime]
-    utcResolvedAt: Optional[datetime]
+    utcHoldExpiration: Optional[datetime] = None
+    utcConfirmedAt: Optional[datetime] = None
+    utcResolvedAt: Optional[datetime] = None
 
 
 @dataclass
 class Booking(BaseModel):
     uuid: str
     status: str
-    utcHoldExpiration: Optional[datetime]
-    utcConfirmedAt: Optional[datetime]
     productId: str
     optionId: str
     availability: BookingAvailability
     contact: BookingContact
     deliveryMethods: List[str]
-    voucher: BookingVoucher
     unitItems: List[BookingUnitItemTicket]
-    resellerReference: Optional[str]
-    supplierReference: Optional[str]
-    refreshFrequency: Optional[str]
+    utcHoldExpiration: Optional[datetime] = None
+    utcConfirmedAt: Optional[datetime] = None
+    resellerReference: Optional[str] = None
+    supplierReference: Optional[str] = None
+    refreshFrequency: Optional[str] = None
+    voucher: Optional[BookingVoucher] = None
     cancellationRequest: Optional[BookingCancellationRequest] = None
 
 
 @dataclass
 class BookingConfirmationRequest(BaseModel):
     contact: BookingContact
-    resellerReference: Optional[str]
+    resellerReference: Optional[str] = None
