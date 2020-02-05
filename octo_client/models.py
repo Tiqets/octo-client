@@ -91,7 +91,10 @@ class Product(BaseModel):
 
 @dataclass
 class DailyAvailability(BaseModel):
+    productId: str
+    optionId: str
     localDate: date
+    capacity: int
     status: str
 
 
