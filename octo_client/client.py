@@ -1,6 +1,6 @@
 from datetime import date
 import logging
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Tuple
 
 import requests
 
@@ -34,11 +34,12 @@ class OctoClient(object):
             raise CODE_EXCEPTION_MAP[status_code](response_content)
 
     def _make_request(self, http_method: Callable, path: str, json=None, params=None):
-        if params and 'supplierId' in params:
+        if path.startswith('suppliers/'):
+            supplier_id = path.split('/')[1]
             if not self.suppliers:
                 self.get_suppliers()
             try:
-                endpoint_url = self.supplier_url_map[params['supplierId']]
+                endpoint_url = self.supplier_url_map[supplier_id]
             except KeyError:
                 raise exceptions.InvalidRequest('Incorrect supplierId')
             full_url = f'{endpoint_url}/{path}'
@@ -63,6 +64,9 @@ class OctoClient(object):
     def _http_post(self, path: str, json: dict, params=None):
         return self._make_request(requests.post, path, json=json, params=params)
 
+    def _http_delete(self, path: str, params=None):
+        return self._make_request(requests.delete, path, params=params)
+
     def get_suppliers(self) -> List[models.Supplier]:
         '''
         This list MAY be limited based on the suppliers that the authenticated user has been granted access to.
@@ -79,7 +83,7 @@ class OctoClient(object):
         '''
         Contains all product details necessary to ingest, map, and sell.
         '''
-        response = self._http_get('products', params={'supplierId': supplier_id})
+        response = self._http_get(f'suppliers/{supplier_id}/products')
         products = [models.Product.from_dict(product) for product in response]
         self.logger.info('Found %s products', len(products), extra={'products': products})
         return products
@@ -87,15 +91,16 @@ class OctoClient(object):
     def get_calendar(
         self,
         supplier_id: str,
-        product_id: str,
-        option_id: str,
+        products: List[Tuple[str, str]],
         start_date: date,
         end_date: date
     ) -> List[models.DailyAvailability]:
-        response = self._http_get('availability/calendar', params={
-            'supplierId': supplier_id,
-            'productId': product_id,
-            'optionId': option_id,
+        '''
+        Returns an availability for given products and options.
+        Products should be a list of tuples: [(product_id, option_id), (product_id, options_id)]
+        '''
+        response = self._http_post(f'suppliers/{supplier_id}/availability/calendar', json={
+            'products': [{'productId': product_id, 'optionId': option_id} for product_id, option_id in products],
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
         })
@@ -134,8 +139,7 @@ class OctoClient(object):
                 and may be available for sale soon. Refresh no more than once/12 hours.
 
         '''
-        response = self._http_get('availability', params={
-            'supplierId': supplier_id,
+        response = self._http_get(f'suppliers/{supplier_id}/availability', params={
             'productId': product_id,
             'optionId': option_id,
             'localDateStart': start_date.isoformat(),
@@ -162,7 +166,7 @@ class OctoClient(object):
         requirements without the Reseller needing to know the details of the restriction
         (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
         '''
-        response = self._http_post('availability', params={'supplierId': supplier_id}, json={
+        response = self._http_post(f'suppliers/{supplier_id}/availability', json={
             'productId': product_id,
             'optionId': option_id,
             'availabilityIds': availability_ids,
@@ -180,11 +184,7 @@ class OctoClient(object):
         '''
         This creates a new booking reservation.
         '''
-        response = self._http_post(
-            'bookings',
-            params={'supplierId': supplier_id},
-            json=booking_request.as_dict(),
-        )
+        response = self._http_post(f'suppliers/{supplier_id}/bookings', json=booking_request.as_dict())
         self.logger.info('Booking created', extra={'booking': response})
         return models.Booking.from_dict(response)
 
@@ -199,8 +199,7 @@ class OctoClient(object):
         is sent, otherwise the response MAY show a status of EXPIRED.
         '''
         response = self._http_post(
-            f'bookings/{uuid}/confirm',
-            params={'supplierId': supplier_id},
+            f'suppliers/{supplier_id}/bookings/{uuid}/confirm',
             json=confirmation_request.as_dict(),
         )
         self.logger.info('Booking confirmed', extra={'booking': response})
@@ -212,9 +211,18 @@ class OctoClient(object):
         the initial createReservation request is processed successfully and it MUST return the booking
         reservation object.
         '''
-        response = self._http_get(
-            f'bookings/{uuid}',
-            params={'supplierId': supplier_id},
-        )
+        response = self._http_get(f'suppliers/{supplier_id}/bookings/{uuid}')
         self.logger.info('Got booking details', extra={'booking': response})
+        return models.Booking.from_dict(response)
+
+    def delete_booking(
+        self,
+        supplier_id: str,
+        uuid: str,
+    ) -> models.Booking:
+        '''
+        Removing the booking with given uuid.
+        '''
+        response = self._http_delete(f'suppliers/{supplier_id}/bookings/{uuid}/cancel')
+        self.logger.info('Booking removed', extra={'booking': response})
         return models.Booking.from_dict(response)

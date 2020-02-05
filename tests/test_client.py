@@ -142,7 +142,7 @@ def test_suppliers_list(client: OctoClient, mocked_responses):
 
 
 def test_products(client: OctoClient, mocked_responses):
-    mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/products', json=[
+    mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/suppliers/0001/products', json=[
         {
             'id': 'a491687f-1dce-4be2-bc47-0157541bc8c1',
             'internalName': 'Studio Tour',
@@ -288,41 +288,89 @@ def test_products(client: OctoClient, mocked_responses):
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
     assert mocked_responses.calls[1].request.url == (
-        'https://api.my-booking-platform.com/v1/products?supplierId=0001'
+        'https://api.my-booking-platform.com/v1/suppliers/0001/products'
     )
 
 
 def test_calendar(client: OctoClient, mocked_responses):
-    mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/availability/calendar', json=[
-        {'localDate': '2020-12-01', 'status': 'AVAILABLE'},
-        {'localDate': '2020-12-02', 'status': 'AVAILABLE'},
-        {'localDate': '2020-12-03', 'status': 'CLOSED'},
-    ])
+    mocked_responses.add(
+        responses.POST,
+        'https://api.my-booking-platform.com/v1/suppliers/0001/availability/calendar',
+        json=[
+            {
+                "capacity": 14,
+                "localDate": "2020-06-01",
+                "productId": "foo",
+                "optionId": "bar",
+                "status": "AVAILABLE"
+            },
+            {
+                "capacity": 18,
+                "localDate": "2020-06-01",
+                "productId": "foo",
+                "optionId": "baz",
+                "status": "AVAILABLE"
+            },
+            {
+                "capacity": 28,
+                "localDate": "2020-06-02",
+                "productId": "foo",
+                "optionId": "bar",
+                "status": "AVAILABLE"
+            },
+            {
+                "capacity": 31,
+                "localDate": "2020-06-02",
+                "productId": "foo",
+                "optionId": "baz",
+                "status": "AVAILABLE"
+            }
+        ]
+    )
     availability = client.get_calendar(
         supplier_id='0001',
-        product_id='bar',
-        option_id='baz',
-        start_date=date(2020, 1, 1),
-        end_date=date(2020, 1, 3),
+        products=[('foo', 'bar'), ('foo', 'baz')],
+        start_date=date(2020, 6, 1),
+        end_date=date(2020, 6, 2),
     )
     assert availability == [
-        m.DailyAvailability(localDate=date(2020, 12, 1), status='AVAILABLE'),
-        m.DailyAvailability(localDate=date(2020, 12, 2), status='AVAILABLE'),
-        m.DailyAvailability(localDate=date(2020, 12, 3), status='CLOSED'),
+        m.DailyAvailability(
+            capacity=14,
+            localDate=date(2020, 6, 1),
+            productId='foo',
+            optionId='bar',
+            status='AVAILABLE',
+        ),
+        m.DailyAvailability(
+            capacity=18,
+            localDate=date(2020, 6, 1),
+            productId='foo',
+            optionId='baz',
+            status='AVAILABLE',
+        ),
+        m.DailyAvailability(
+            capacity=28,
+            localDate=date(2020, 6, 2),
+            productId='foo',
+            optionId='bar',
+            status='AVAILABLE',
+        ),
+        m.DailyAvailability(
+            capacity=31,
+            localDate=date(2020, 6, 2),
+            productId='foo',
+            optionId='baz',
+            status='AVAILABLE',
+        ),
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
     assert mocked_responses.calls[1].request.url == (
-        'https://api.my-booking-platform.com/v1/availability/calendar'
-        '?supplierId=0001'
-        '&productId=bar'
-        '&optionId=baz'
-        '&localDateStart=2020-01-01'
-        '&localDateEnd=2020-01-03'
+        'https://api.my-booking-platform.com/v1/suppliers/0001/availability/calendar'
     )
 
 
 def test_availability(client: OctoClient, mocked_responses):
-    mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/availability', json=[
+    mocked_responses.add(responses.GET, 'https://api.my-booking-platform.com/v1/suppliers/0001/availability', json=[
         {
             'id': '2020-12-01T09:00:00-08:00',
             'localDateTimeStart': '2020-12-01T09:00:00-08:00',
@@ -389,9 +437,8 @@ def test_availability(client: OctoClient, mocked_responses):
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
     assert mocked_responses.calls[1].request.url == (
-        'https://api.my-booking-platform.com/v1/availability'
-        '?supplierId=0001'
-        '&productId=bar'
+        'https://api.my-booking-platform.com/v1/suppliers/0001/availability'
+        '?productId=bar'
         '&optionId=baz'
         '&localDateStart=2020-12-01'
         '&localDateEnd=2020-12-02'
@@ -399,7 +446,7 @@ def test_availability(client: OctoClient, mocked_responses):
 
 
 def test_test_reservation(client: OctoClient, mocked_responses):
-    mocked_responses.add(responses.POST, 'https://api.my-booking-platform.com/v1/availability', json=[
+    mocked_responses.add(responses.POST, 'https://api.my-booking-platform.com/v1/suppliers/0001/availability', json=[
         {
             'id': '2020-12-01T15:30:00-08:00',
             'localDateTimeStart': '2020-12-01T15:30:00-08:00',
@@ -429,10 +476,7 @@ def test_test_reservation(client: OctoClient, mocked_responses):
         )
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
-    assert mocked_responses.calls[1].request.url == (
-        'https://api.my-booking-platform.com/v1/availability'
-        '?supplierId=0001'
-    )
+    assert mocked_responses.calls[1].request.url == 'https://api.my-booking-platform.com/v1/suppliers/0001/availability'
     request_json = json.loads(mocked_responses.calls[1].request.body)
     assert request_json == {
         'productId': 'bar',
@@ -446,7 +490,11 @@ def test_test_reservation(client: OctoClient, mocked_responses):
 
 
 def test_create_reservation(client: OctoClient, mocked_responses):
-    mocked_responses.add(responses.POST, 'https://api.my-booking-platform.com/v1/bookings', json=BOOKING_JSON)
+    mocked_responses.add(
+        responses.POST,
+        'https://api.my-booking-platform.com/v1/suppliers/0001/bookings',
+        json=BOOKING_JSON
+    )
     reservation = client.create_reservation(
         supplier_id='0001',
         booking_request=m.BookingRequest(
@@ -464,10 +512,7 @@ def test_create_reservation(client: OctoClient, mocked_responses):
     )
     assert reservation == BOOKING_MODEL
     assert len(mocked_responses.calls) == 2, 'Too many requests'
-    assert mocked_responses.calls[1].request.url == (
-        'https://api.my-booking-platform.com/v1/bookings'
-        '?supplierId=0001'
-    )
+    assert mocked_responses.calls[1].request.url == 'https://api.my-booking-platform.com/v1/suppliers/0001/bookings'
     request_json = json.loads(mocked_responses.calls[1].request.body)
     assert request_json == {
         'uuid': 'f149068e-300e-452a-a856-3f091239f1d7',
@@ -487,7 +532,7 @@ def test_create_reservation(client: OctoClient, mocked_responses):
 def test_reservation_confirmation(client: OctoClient, mocked_responses):
     mocked_responses.add(
         responses.POST,
-        'https://api.my-booking-platform.com/v1/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe/confirm',
+        'https://api.my-booking-platform.com/v1/suppliers/0001/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe/confirm',
         json=BOOKING_JSON,
     )
     reservation = client.confirm_reservation(
@@ -507,8 +552,7 @@ def test_reservation_confirmation(client: OctoClient, mocked_responses):
     assert reservation == BOOKING_MODEL
     assert len(mocked_responses.calls) == 2, 'Too many requests'
     assert mocked_responses.calls[1].request.url == (
-        'https://api.my-booking-platform.com/v1/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe/confirm'
-        '?supplierId=0001'
+        'https://api.my-booking-platform.com/v1/suppliers/0001/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe/confirm'
     )
     request_json = json.loads(mocked_responses.calls[1].request.body)
     assert request_json == {
@@ -526,7 +570,7 @@ def test_reservation_confirmation(client: OctoClient, mocked_responses):
 def test_booking_details(client: OctoClient, mocked_responses):
     mocked_responses.add(
         responses.GET,
-        'https://api.my-booking-platform.com/v1/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe',
+        'https://api.my-booking-platform.com/v1/suppliers/0001/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe',
         json=BOOKING_JSON,
     )
     reservation = client.get_booking_details(
@@ -536,6 +580,5 @@ def test_booking_details(client: OctoClient, mocked_responses):
     assert reservation == BOOKING_MODEL
     assert len(mocked_responses.calls) == 2, 'Too many requests'
     assert mocked_responses.calls[1].request.url == (
-        'https://api.my-booking-platform.com/v1/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe'
-        '?supplierId=0001'
+        'https://api.my-booking-platform.com/v1/suppliers/0001/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe'
     )
