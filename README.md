@@ -1,6 +1,8 @@
-# OCTO API client
+# OCTo API client
 
-Python HTTP client for OCTO (Open Connection for Tourism) APIs.
+Python HTTP client for OCTo (Open Connection for Tourism) APIs.
+
+More info at [octospec.com](https://octospec.com/)
 
 ## Installation
 

@@ -1,6 +1,6 @@
 from datetime import date
 import logging
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List
 
 import requests
 
@@ -12,7 +12,7 @@ logger.setLevel(logging.INFO)
 
 class OctoClient(object):
     """
-    HTTP client for OCTO (Open Connection for Tourism) APIs.
+    HTTP client for OCTo (Open Connection for Tourism) APIs.
     """
 
     def __init__(self, url: str, token: str, custom_logger: logging.Logger = None) -> None:
@@ -91,20 +91,21 @@ class OctoClient(object):
     def get_calendar(
         self,
         supplier_id: str,
-        products: List[Tuple[str, str]],
+        product_id: str,
+        option_id: str,
         start_date: date,
-        end_date: date
-    ) -> List[models.DailyAvailability]:
+        end_date: date,
+    ) -> List[models.AvailabilityCalendarItem]:
         '''
-        Returns an availability for given products and options.
-        Products should be a list of tuples: [(product_id, option_id), (product_id, options_id)]
+        Returns an availability for given product and option.
         '''
-        response = self._http_post(f'suppliers/{supplier_id}/availability/calendar', json={
-            'products': [{'productId': product_id, 'optionId': option_id} for product_id, option_id in products],
+        response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params={
+            'productId': product_id,
+            'optionId': option_id,
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
         })
-        daily_availability = [models.DailyAvailability.from_dict(availability) for availability in response]
+        daily_availability = [models.AvailabilityCalendarItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s days', len(daily_availability), extra={'calendar': response})
         return daily_availability
 
@@ -115,7 +116,7 @@ class OctoClient(object):
         option_id: str,
         start_date: date,
         end_date: date,
-    ) -> List[models.AvailabilityStatus]:
+    ) -> List[models.AvailabilityItem]:
         '''
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
 
@@ -145,26 +146,25 @@ class OctoClient(object):
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
         })
-        detailed_availability = [models.AvailabilityStatus.from_dict(availability) for availability in response]
+        detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability), extra={'availability': response})
         return detailed_availability
 
-    def test_reservation(
+    def test_availability(
         self,
         supplier_id: str,
         product_id: str,
         option_id: str,
         availability_ids: List[str],
         units: List[models.UnitQuantity],
-    ) -> List[models.AvailabilityStatus]:
+    ) -> List[models.AvailabilityItem]:
         '''
-        This request is intended to provide the Booking Platform a complete view of the Unit IDs,
-        Unit quantity, and Availability IDs so that additional restrictions and policies can be
-        validated within the Booking Platform prior to making a Booking. The purpose is to
-        provide a clear and accurate answer to the Reseller about whether the requested booking
-        configuration could be accepted by the Supplier. This is to support complex booking
-        requirements without the Reseller needing to know the details of the restriction
-        (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
+        This request is intended to provide the Booking Platform a complete view of the Unit IDs, Unit quantity,
+        and Availability IDs so that additional restrictions and policies can be validated within
+        the Booking Platform prior to making a Booking. The purpose is to provide a clear and accurate
+        answer to the Reseller about whether the requested booking configuration could be accepted by the Supplier.
+        This is to support complex booking requirements without the Reseller needing to know the details
+        of the restriction (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
         '''
         response = self._http_post(f'suppliers/{supplier_id}/availability', json={
             'productId': product_id,
@@ -172,31 +172,40 @@ class OctoClient(object):
             'availabilityIds': availability_ids,
             'units': [unit.as_dict() for unit in units],
         })
-        detailed_availability = [models.AvailabilityStatus.from_dict(availability) for availability in response]
+        detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability), extra={'availability': response})
         return detailed_availability
 
-    def create_reservation(
+    def create_booking(
         self,
         supplier_id: str,
         booking_request: models.BookingRequest,
     ) -> models.Booking:
         '''
-        This creates a new booking reservation.
+        This creates a new pending booking.
+
+        This call has to be idempotent. To be able to safely retry a call on any network error or timeout,
+        therefore it MUST not fail on retry or create a duplicate booking. The idempotency key is the UUID.
+        A supplier SHOULD verify that a retried request with the same UUID is matching the original booking data,
+        to avoid erroneous clients generating repeating UUIDs and response with the status 400
+        and ErrorCode 1005 in such case.
         '''
         response = self._http_post(f'suppliers/{supplier_id}/bookings', json=booking_request.as_dict())
         self.logger.info('Booking created', extra={'booking': response})
         return models.Booking.from_dict(response)
 
-    def confirm_reservation(
+    def confirm_booking(
         self,
         supplier_id: str,
         uuid: str,
         confirmation_request: models.BookingConfirmationRequest,
     ) -> models.Booking:
         '''
-        This confirms an existing reservation. The utcHoldExpiration MUST NOT be elapsed when this request
-        is sent, otherwise the response MAY show a status of EXPIRED.
+        This confirms an in-progress booking. The utcHoldExpiration MUST NOT be elapsed when this request is sent,
+        otherwise the response MAY show a status of EXPIRED.
+
+        This call MUST be idempotent so that a Reseller may retry the request for any network error or timeout.
+        The Booking uuid MUST be used to ensure idempotency of the request.
         '''
         response = self._http_post(
             f'suppliers/{supplier_id}/bookings/{uuid}/confirm',
@@ -208,8 +217,7 @@ class OctoClient(object):
     def get_booking_details(self, supplier_id: str, uuid: str) -> models.Booking:
         '''
         This returns the current state of any valid booking. This request MAY be made at any point after
-        the initial createReservation request is processed successfully and it MUST return the booking
-        reservation object.
+        the initial createBooking request is processed successfully and it MUST return the booking object.
         '''
         response = self._http_get(f'suppliers/{supplier_id}/bookings/{uuid}')
         self.logger.info('Got booking details', extra={'booking': response})
@@ -219,10 +227,20 @@ class OctoClient(object):
         self,
         supplier_id: str,
         uuid: str,
+        reason: models.CancelReason,
+        reason_details: str,
     ) -> models.Booking:
         '''
-        Removing the booking with given uuid.
+        This expires the availability hold of an in-progress booking so that the availablity is release
+        for other bookings. This request is a courtesy, however Resellers SHOULD send this in order
+        to ensure proper cleanup of any outstanding holds.
+
+        This call has to be idempotent. To be able to safely retry a call on any network error or timeout,
+        therefore it MUST not fail on retry. The idempotency key is the UUID.
         '''
-        response = self._http_delete(f'suppliers/{supplier_id}/bookings/{uuid}/cancel')
+        response = self._http_post(f'suppliers/{supplier_id}/bookings/{uuid}/cancel', json={
+            'reason': reason.value,
+            'reasonDetails': reason_details,
+        })
         self.logger.info('Booking removed', extra={'booking': response})
         return models.Booking.from_dict(response)

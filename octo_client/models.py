@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
+from enum import Enum
 from typing import List, Optional
 
 from dacite import Config, from_dict
@@ -34,8 +35,8 @@ class BaseModel:
 
 @dataclass
 class SupplierContact(BaseModel):
-    address: str
-    email: Optional[str] = None
+    email: str
+    address: Optional[str] = None
     telephone: Optional[str] = None
     description: Optional[str] = None
     website: Optional[str] = None
@@ -76,7 +77,6 @@ class Option(BaseModel):
 class Product(BaseModel):
     id: str
     internalName: str
-    reference: str
     locale: str
     timeZone: str
     instantConfirmation: bool
@@ -87,26 +87,23 @@ class Product(BaseModel):
     redemptionMethod: str
     capabilities: List[Capability]
     options: List[Option]
+    reference: Optional[str] = None
 
 
 @dataclass
-class DailyAvailability(BaseModel):
-    productId: str
-    optionId: str
+class AvailabilityCalendarItem(BaseModel):
     localDate: date
-    capacity: int
     status: str
+    vacancies: Optional[int] = None
 
 
 @dataclass
-class AvailabilityStatus(BaseModel):
+class AvailabilityItem(BaseModel):
     id: str
     localDateTimeStart: datetime
     localDateTimeEnd: datetime
     status: str
-    vacancies: int
-    capacity: int
-    maxUnits: int
+    vacancies: Optional[int] = None
 
 
 @dataclass
@@ -118,7 +115,7 @@ class UnitItem(BaseModel):
 
 @dataclass
 class UnitQuantity(BaseModel):
-    id: str
+    unitId: str
     quantity: int
 
 
@@ -134,14 +131,14 @@ class BookingRequest(BaseModel):
 
 
 @dataclass
-class BookingAvailability(BaseModel):
+class Availability(BaseModel):
     id: str
     localDateTimeStart: datetime
     localDateTimeEnd: datetime
 
 
 @dataclass
-class BookingContact(BaseModel):
+class Contact(BaseModel):
     locales: List[str]
     fullName: Optional[str] = None
     emailAddress: Optional[str] = None
@@ -156,7 +153,7 @@ class DeliveryOption(BaseModel):
 
 
 @dataclass
-class BookingVoucher(BaseModel):
+class Ticket(BaseModel):
     deliveryOptions: List[DeliveryOption]
     redemptionMethod: str
     utcDeliveredAt: Optional[datetime] = None
@@ -172,16 +169,16 @@ class BookingTicket(BaseModel):
 
 
 @dataclass
-class BookingUnitItemTicket(BaseModel):
+class UnitItemTicket(BaseModel):
+    uuid: str
     unitId: str
-    ticket: BookingTicket
-    uuid: Optional[str] = None
+    ticket: Optional[BookingTicket] = None
     resellerReference: Optional[str] = None
     supplierReference: Optional[str] = None
 
 
 @dataclass
-class BookingCancellationRequest(BaseModel):
+class CancellationRequest(BaseModel):
     reason: str
     reasonDetails: str
     status: str
@@ -198,20 +195,37 @@ class Booking(BaseModel):
     status: str
     productId: str
     optionId: str
-    availability: BookingAvailability
-    contact: BookingContact
+    availability: Availability
     deliveryMethods: List[str]
-    unitItems: List[BookingUnitItemTicket]
+    unitItems: List[UnitItemTicket]
+    contact: Optional[Contact] = None
     utcHoldExpiration: Optional[datetime] = None
     utcConfirmedAt: Optional[datetime] = None
     resellerReference: Optional[str] = None
     supplierReference: Optional[str] = None
     refreshFrequency: Optional[str] = None
-    voucher: Optional[BookingVoucher] = None
-    cancellationRequest: Optional[BookingCancellationRequest] = None
+    voucher: Optional[Ticket] = None
+    cancellationRequest: Optional[CancellationRequest] = None
 
 
 @dataclass
 class BookingConfirmationRequest(BaseModel):
-    contact: BookingContact
+    contact: Contact
     resellerReference: Optional[str] = None
+
+
+class CancelReason(Enum):
+    # is the most common and indicates that the customer requested the cancellation
+    CUSTOMER = 'CUSTOMER'
+
+    # indicates that the supplier requested the cancellation
+    # (possibly due to bad weather or other unexpected circumstances)
+    SUPPLIER = 'SUPPLIER'
+
+    # indicates that the booking cancellation is being requested by the Reseller
+    # because it has been determined the booking was fraudulent
+    FRAUD = 'FRAUD'
+
+    # indicates that the cancellation reason does not fall into one of these categories.
+    # This SHOULD be used only in rare circumstances
+    OTHER = 'OTHER'
