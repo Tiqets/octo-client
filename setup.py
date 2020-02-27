@@ -8,9 +8,9 @@ with open(path.join(here, 'README.md')) as f:
     long_description = f.read()
 
 setup(
-    name='OCTO-API-client',
-    version='0.1.1',
-    description='HTTP client for OCTO (Open Connection for Tourism) APIs.',
+    name='OCTo-API-client',
+    version='0.1.2',
+    description='HTTP client for OCTo (Open Connection for Tourism) APIs.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=find_packages(exclude=['tests*']),
