@@ -21,6 +21,7 @@ class OctoClient(object):
         self.logger = custom_logger or logger
         self.suppliers: List[models.Supplier] = []
         self.supplier_url_map: Dict[str, str] = {}
+        self.requests_loglevel = logging.DEBUG
 
     @staticmethod
     def _raise_for_status(status_code: int, response_content: str) -> None:
@@ -45,7 +46,7 @@ class OctoClient(object):
             full_url = f'{endpoint_url}/{path}'
         else:
             full_url = f'{self.url}/{path}'
-        self.logger.debug('%s %s', http_method.__name__.upper(), full_url)
+        self.logger.log(self.requests_loglevel, 'Sending request to %s (%s)', full_url, http_method.__name__.upper())
         response = http_method(
             full_url,
             params=params or {},
@@ -53,7 +54,12 @@ class OctoClient(object):
             headers=self._get_headers(),
         )
         self._raise_for_status(response.status_code, response.content)
-        return response.json()
+        try:
+            response_json = response.json()
+        except Exception:
+            raise exceptions.ApiError('Non-JSON response')
+        self.logger.log(self.requests_loglevel, 'Get response from %s (%s)', full_url, http_method.__name__.upper())
+        return response_json
 
     def _get_headers(self) -> Dict[str, str]:
         return {'Authorization': f'Bearer {self.token}'}
