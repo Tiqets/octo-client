@@ -67,54 +67,61 @@ BOOKING_JSON = {
         }
     ],
 }
-BOOKING_MODEL = m.Booking(
-    uuid='f149068e-300e-452a-a856-3f091239f1d7',
-    status='ON_HOLD',
-    utcHoldExpiration=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-    utcConfirmedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-    productId='adult',
-    optionId='LR1-01',
-    availability=m.Availability(
-        id='28271273-a317-40fc-8f42-79725a7072a3',
-        localDateTimeStart=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        localDateTimeEnd=datetime(2019, 10, 31, 10, 0, tzinfo=timezone.utc),
-    ),
-    contact=m.Contact(
-        fullName='Mr. Traveller',
-        emailAddress='traveller@fake.com',
-        phoneNumber='+1 555-555-1212',
-        locales=['en-GB', 'en-US', 'en'],
-        country='GB'
-    ),
-    deliveryMethods=['VOUCHER'],
-    voucher=m.Ticket(
-        deliveryOptions=[
-            m.DeliveryOption(deliveryFormat='CODE39', deliveryValue='01234567890')
+BOOKING_MODEL = m.Booking.from_dict({
+    'uuid': 'f149068e-300e-452a-a856-3f091239f1d7',
+    'status': 'ON_HOLD',
+    'utcHoldExpiration': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+    'utcConfirmedAt': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+    'utcDeliveredAt': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+    'productId': 'adult',
+    'optionId': 'LR1-01',
+    'availability': {
+        'id': '28271273-a317-40fc-8f42-79725a7072a3',
+        'localDateTimeStart': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+        'localDateTimeEnd': datetime(2019, 10, 31, 10, 0, tzinfo=timezone.utc).isoformat(),
+    },
+    'contact': {
+        'fullName': 'Mr. Traveller',
+        'emailAddress': 'traveller@fake.com',
+        'phoneNumber': '+1 555-555-1212',
+        'locales': ['en-GB', 'en-US', 'en'],
+        'country': 'GB'
+    },
+    'deliveryMethods': ['VOUCHER'],
+    'voucher': {
+        'deliveryOptions': [
+            {
+                'deliveryFormat': 'CODE39',
+                'deliveryValue': '01234567890',
+            }
         ],
-        redemptionMethod='DIGITAL',
-        utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-        utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-    ),
-    unitItems=[
-        m.UnitItemTicket(
-            uuid='6be0409f-181e-4520-acc1-cc6791896859',
-            unitId='adult',
-            ticket=m.BookingTicket(
-                deliveryOptions=[
-                    m.DeliveryOption(deliveryFormat='CODE39', deliveryValue='01234567890')
+        'redemptionMethod': 'DIGITAL',
+        'utcDeliveredAt': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+        'utcRedeemedAt': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+    },
+    'unitItems': [
+        {
+            'uuid': '6be0409f-181e-4520-acc1-cc6791896859',
+            'unitId': 'adult',
+            'ticket': {
+                'deliveryOptions': [
+                    {
+                        'deliveryFormat': 'CODE39',
+                        'deliveryValue': '01234567890',
+                    }
                 ],
-                redemptionMethod='DIGITAL',
-                utcDeliveredAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-                utcRedeemedAt=datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc),
-            ),
-            resellerReference='001-002',
-            supplierReference='ABC-123'
-        )
+                'redemptionMethod': 'DIGITAL',
+                'utcDeliveredAt': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+                'utcRedeemedAt': datetime(2019, 10, 31, 8, 30, tzinfo=timezone.utc).isoformat(),
+            },
+            'resellerReference': '001-002',
+            'supplierReference': 'ABC-123'
+        }
     ],
-    resellerReference='001-002',
-    supplierReference='ABC-123',
-    refreshFrequency='HOURLY',
-)
+    'resellerReference': '001-002',
+    'supplierReference': 'ABC-123',
+    'refreshFrequency': 'HOURLY',
+})
 
 
 def test_suppliers_list(client: OctoClient, mocked_responses):
@@ -129,8 +136,14 @@ def test_suppliers_list(client: OctoClient, mocked_responses):
                 email='info@acme-tours.co.fake',
                 telephone='+1 888-555-1212',
                 description=None,
-                website='https://acme-tours.co.fake'
-            )
+                website='https://acme-tours.co.fake',
+                extra_fields={
+                    'country': 'US',
+                },
+            ),
+            extra_fields={
+                'timezone': 'EST',
+            },
         )
     ]
     assert client.supplier_url_map == {
@@ -161,24 +174,12 @@ def test_products(client: OctoClient, mocked_responses):
                     'id': '345314bb-aaaf-4ba2-b3ef-ff15ea39a0ae',
                     'internalName': 'Studio Tour',
                     'reference': None,
-                    'restrictions': {
-                        'minUnits': 0,
-                        'maxUnits': None
-                    },
                     'units': [
                         {
                             'id': 'adult',
                             'internalName': 'Studio Tour',
                             'reference': None,
                             'type': 'ADULT',
-                            'restrictions': {
-                                'minAge': None,
-                                'maxAge': None,
-                                'idRequired': False,
-                                'minQuantity': 7,
-                                'maxQuantity': None,
-                                'accompaniedBy': []
-                            }
                         }
                     ]
                 }
@@ -201,24 +202,12 @@ def test_products(client: OctoClient, mocked_responses):
                     'id': 'DEFAULT',
                     'internalName': 'DEFAULT',
                     'reference': None,
-                    'restrictions': {
-                        'minUnits': 0,
-                        'maxUnits': None
-                    },
                     'units': [
                         {
                             'id': 'adult',
                             'internalName': 'VIP Tour',
                             'reference': None,
                             'type': 'ADULT',
-                            'restrictions': {
-                                'minAge': None,
-                                'maxAge': None,
-                                'idRequired': False,
-                                'minQuantity': 7,
-                                'maxQuantity': None,
-                                'accompaniedBy': []
-                            }
                         }
                     ]
                 }
@@ -249,12 +238,15 @@ def test_products(client: OctoClient, mocked_responses):
                             id='adult',
                             internalName='Studio Tour',
                             type='ADULT',
-                            reference=None
+                            reference=None,
+                            extra_fields={},
                         )
                     ],
-                    reference=None
+                    reference=None,
+                    extra_fields={},
                 )
-            ]
+            ],
+            extra_fields={},
         ),
         m.Product(
             id='3e803053-6f39-46f7-8a67-2114de59b135',
@@ -278,12 +270,15 @@ def test_products(client: OctoClient, mocked_responses):
                             id='adult',
                             internalName='VIP Tour',
                             type='ADULT',
-                            reference=None
+                            reference=None,
+                            extra_fields={},
                         )
                     ],
-                    reference=None
+                    reference=None,
+                    extra_fields={},
                 )
-            ]
+            ],
+            extra_fields={},
         ),
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
@@ -331,21 +326,25 @@ def test_calendar(client: OctoClient, mocked_responses):
             localDate=date(2020, 6, 1),
             status='AVAILABLE',
             vacancies=14,
+            extra_fields={},
         ),
         m.AvailabilityCalendarItem(
             localDate=date(2020, 6, 1),
             status='AVAILABLE',
             vacancies=18,
+            extra_fields={},
         ),
         m.AvailabilityCalendarItem(
             localDate=date(2020, 6, 2),
             status='AVAILABLE',
             vacancies=28,
+            extra_fields={},
         ),
         m.AvailabilityCalendarItem(
             localDate=date(2020, 6, 2),
             status='AVAILABLE',
             vacancies=31,
+            extra_fields={},
         ),
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
@@ -396,6 +395,7 @@ def test_availability(client: OctoClient, mocked_responses):
             localDateTimeEnd=datetime(2020, 12, 1, 11, 0, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             status='AVAILABLE',
             vacancies=14,
+            extra_fields={},
         ),
         m.AvailabilityItem(
             id='2020-12-01T09:30:00-08:00',
@@ -403,6 +403,7 @@ def test_availability(client: OctoClient, mocked_responses):
             localDateTimeEnd=datetime(2020, 12, 1, 11, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             status='AVAILABLE',
             vacancies=13,
+            extra_fields={},
         ),
         m.AvailabilityItem(
             id='2020-12-01T10:00:00-08:00',
@@ -410,6 +411,7 @@ def test_availability(client: OctoClient, mocked_responses):
             localDateTimeEnd=datetime(2020, 12, 1, 12, 0, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             status='AVAILABLE',
             vacancies=12,
+            extra_fields={},
         ),
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
@@ -437,7 +439,7 @@ def test_test_availability(client: OctoClient, mocked_responses):
         product_id='bar',
         option_id='baz',
         availability_ids=['2020-12-01T15:30:00-08:00'],
-        units=[m.UnitQuantity(unitId='adult', quantity=2)],
+        units=[m.UnitQuantity(unitId='adult', quantity=2, extra_fields={})],
     )
     assert availability == [
         m.AvailabilityItem(
@@ -446,6 +448,7 @@ def test_test_availability(client: OctoClient, mocked_responses):
             localDateTimeEnd=datetime(2020, 12, 1, 17, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
             status='AVAILABLE',
             vacancies=14,
+            extra_fields={},
         )
     ]
     assert len(mocked_responses.calls) == 2, 'Too many requests'
@@ -479,8 +482,10 @@ def test_create_booking(client: OctoClient, mocked_responses):
                 m.UnitItem(
                     uuid='6be0409f-181e-4520-acc1-cc6791896859',
                     unitId='adult',
+                    extra_fields={},
                 )
             ],
+            extra_fields={},
         ),
     )
     assert booking == BOOKING_MODEL
@@ -495,10 +500,11 @@ def test_create_booking(client: OctoClient, mocked_responses):
         'unitItems': [{
             'uuid': '6be0409f-181e-4520-acc1-cc6791896859',
             'unitId': 'adult',
-            'resellerReference': None
+            'resellerReference': None,
+            'extra_fields': {},
         }],
         'holdExpirationMinutes': None,
-        'resellerReference': None
+        'resellerReference': None,
     }
 
 
@@ -519,7 +525,9 @@ def test_booking_confirmation(client: OctoClient, mocked_responses):
                 phoneNumber='+1 555-555-1212',
                 locales=['en-GB', 'en-US', 'en'],
                 country='GB',
-            )
+                extra_fields={},
+            ),
+            extra_fields={},
         )
     )
     assert booking == BOOKING_MODEL
@@ -534,7 +542,8 @@ def test_booking_confirmation(client: OctoClient, mocked_responses):
             'emailAddress': 'traveller@fake.local',
             'phoneNumber': '+1 555-555-1212',
             'locales': ['en-GB', 'en-US', 'en'],
-            'country': 'GB'
+            'country': 'GB',
+            'extra_fields': {},
         },
         'resellerReference': '001-002'
     }

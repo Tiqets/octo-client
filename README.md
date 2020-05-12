@@ -33,3 +33,13 @@ To run all linters and tests:
 If you want to run a specific test
 
     $ pytest -k test_name
+
+
+## Usage
+
+```
+from octo_client import OctoClient
+
+client = OctoClient('https://octo-api.mysupplier.com', 'MY-SECRET_TOKEN')
+client.get_suppliers()
+```

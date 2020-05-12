@@ -101,16 +101,20 @@ class OctoClient(object):
         option_id: str,
         start_date: date,
         end_date: date,
+        extra_fields: dict = None,
     ) -> List[models.AvailabilityCalendarItem]:
         '''
         Returns an availability for given product and option.
         '''
-        response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params={
+        params = {
             'productId': product_id,
             'optionId': option_id,
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
-        })
+        }
+        if extra_fields:
+            params.update(extra_fields)
+        response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params=params)
         daily_availability = [models.AvailabilityCalendarItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s days', len(daily_availability), extra={'calendar': response})
         return daily_availability
@@ -122,6 +126,7 @@ class OctoClient(object):
         option_id: str,
         start_date: date,
         end_date: date,
+        extra_fields: dict = None,
     ) -> List[models.AvailabilityItem]:
         '''
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
@@ -146,12 +151,15 @@ class OctoClient(object):
                 and may be available for sale soon. Refresh no more than once/12 hours.
 
         '''
-        response = self._http_get(f'suppliers/{supplier_id}/availability', params={
+        params = {
             'productId': product_id,
             'optionId': option_id,
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
-        })
+        }
+        if extra_fields:
+            params.update(extra_fields)
+        response = self._http_get(f'suppliers/{supplier_id}/availability', params=params)
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability), extra={'availability': response})
         return detailed_availability
@@ -163,6 +171,7 @@ class OctoClient(object):
         option_id: str,
         availability_ids: List[str],
         units: List[models.UnitQuantity],
+        extra_fields: dict = None,
     ) -> List[models.AvailabilityItem]:
         '''
         This request is intended to provide the Booking Platform a complete view of the Unit IDs, Unit quantity,
@@ -172,12 +181,15 @@ class OctoClient(object):
         This is to support complex booking requirements without the Reseller needing to know the details
         of the restriction (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
         '''
-        response = self._http_post(f'suppliers/{supplier_id}/availability', json={
+        json_data = {
             'productId': product_id,
             'optionId': option_id,
             'availabilityIds': availability_ids,
             'units': [unit.as_dict() for unit in units],
-        })
+        }
+        if extra_fields:
+            json_data.update(extra_fields)
+        response = self._http_post(f'suppliers/{supplier_id}/availability', json=json_data)
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability), extra={'availability': response})
         return detailed_availability
@@ -235,6 +247,7 @@ class OctoClient(object):
         uuid: str,
         reason: models.CancelReason,
         reason_details: str,
+        extra_fields: dict = None,
     ) -> models.Booking:
         '''
         This expires the availability hold of an in-progress booking so that the availablity is release
@@ -244,9 +257,12 @@ class OctoClient(object):
         This call has to be idempotent. To be able to safely retry a call on any network error or timeout,
         therefore it MUST not fail on retry. The idempotency key is the UUID.
         '''
-        response = self._http_post(f'suppliers/{supplier_id}/bookings/{uuid}/cancel', json={
+        json_data = {
             'reason': reason.value,
             'reasonDetails': reason_details,
-        })
+        }
+        if extra_fields:
+            json_data.update(extra_fields)
+        response = self._http_post(f'suppliers/{supplier_id}/bookings/{uuid}/cancel', json=json_data)
         self.logger.info('Booking removed', extra={'booking': response})
         return models.Booking.from_dict(response)

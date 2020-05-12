@@ -21,8 +21,10 @@ def client(mocked_responses):
                 'website': 'https://acme-tours.co.fake',
                 'email': 'info@acme-tours.co.fake',
                 'telephone': '+1 888-555-1212',
-                'address': '123 Main St, Anytown USA'
-            }
+                'address': '123 Main St, Anytown USA',
+                'country': 'US',
+            },
+            'timezone': 'EST',
         }
     ])
     return OctoClient('http://fake-api.local', 'bar')
