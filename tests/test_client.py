@@ -152,6 +152,7 @@ def test_suppliers_list(client: OctoClient, mocked_responses):
     assert len(mocked_responses.calls) == 1, 'Too many requests'
     assert mocked_responses.calls[0].request.url == 'http://fake-api.local/suppliers'
     assert mocked_responses.calls[0].request.headers['Authorization'] == 'Bearer bar'
+    assert mocked_responses.calls[0].request.body is None
 
 
 def test_products(client: OctoClient, mocked_responses):

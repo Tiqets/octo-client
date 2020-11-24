@@ -9,7 +9,7 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='OCTo-API-client',
-    version='0.1.3',
+    version='0.1.4',
     description='HTTP client for OCTo (Open Connection for Tourism) APIs.',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -30,6 +30,7 @@ setup(
     ],
     extras_require={
         'tests': [
+            'isort==4.3.21',
             'flake8-isort==2.7.0',
             'flake8==3.7.9',
             'mypy==0.770',
