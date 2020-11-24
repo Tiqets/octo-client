@@ -50,7 +50,7 @@ class OctoClient(object):
         response = http_method(
             full_url,
             params=params or {},
-            json=json or {},
+            json=json,
             headers=self._get_headers(),
         )
         self._raise_for_status(response.status_code, response.content)
