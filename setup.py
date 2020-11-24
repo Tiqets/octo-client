@@ -30,6 +30,7 @@ setup(
     ],
     extras_require={
         'tests': [
+            'isort==4.3.21',
             'flake8-isort==2.7.0',
             'flake8==3.7.9',
             'mypy==0.770',
