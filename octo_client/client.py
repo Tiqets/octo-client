@@ -58,7 +58,7 @@ class OctoClient(object):
             response_json = response.json()
         except Exception:
             raise exceptions.ApiError('Non-JSON response')
-        self.logger.log(self.requests_loglevel, 'Get response from %s (%s)', full_url, http_method.__name__.upper())
+        self.logger.log(self.requests_loglevel, 'Got response from %s (%s)', full_url, http_method.__name__.upper())
         return response_json
 
     def _get_headers(self) -> Dict[str, str]:

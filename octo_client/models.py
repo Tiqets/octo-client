@@ -111,8 +111,8 @@ class Product(BaseModel):
     deliveryFormats: List[str]
     deliveryMethods: List[str]
     redemptionMethod: str
-    capabilities: List[Capability]
     options: List[Option]
+    capabilities: List[Capability] = field(default_factory=list)
     reference: Optional[str] = None
     extra_fields: Optional[dict] = field(default_factory=dict)
 
