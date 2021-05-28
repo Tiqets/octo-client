@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
 import json
 
+import pytest
 import responses
 
-from octo_client import OctoClient
+from octo_client import OctoClient, exceptions
 from octo_client import models as m
 
 BOOKING_JSON = {
@@ -565,3 +566,16 @@ def test_booking_details(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[1].request.url == (
         'https://api.my-booking-platform.com/v1/suppliers/0001/bookings/7df49d62-57ad-44be-8373-e4c2fe7e63fe'
     )
+
+
+@responses.activate
+def test_get_suppliers_raise_api_error_when_message_is_internal_server_error():
+    responses.add(
+        responses.GET,
+        'http://fake-api.local/suppliers',
+        json={'message': 'Internal server error'}
+    )
+    client = OctoClient('http://fake-api.local', 'bar')
+
+    with pytest.raises(exceptions.ApiError, match='Internal server error'):
+        client.get_suppliers()

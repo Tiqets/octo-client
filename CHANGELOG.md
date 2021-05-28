@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+- Fix handle attribute error when supplier return internal error with no status code.
+
 ## 0.1.5
 
 - Marking the Product.capabilities field as optional.
