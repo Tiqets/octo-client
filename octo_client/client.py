@@ -59,7 +59,13 @@ class OctoClient(object):
             response_json = response.json()
         except Exception:
             raise exceptions.ApiError('Non-JSON response')
-        self.logger.log(self.requests_loglevel, 'Got response from %s (%s)', full_url, http_method.__name__.upper(), extra={"response" : response_json if self.log_responses else None})
+        self.logger.log(
+            self.requests_loglevel,
+            'Got response from %s (%s)',
+            full_url,
+            http_method.__name__.upper(),
+            extra={"response": response_json} if self.log_responses else None
+        )
         return response_json
 
     def _get_headers(self) -> Dict[str, str]:
@@ -82,7 +88,7 @@ class OctoClient(object):
         try:
             self.suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
         except AttributeError:
-            raise exceptions.ApiError(response.get('message'))
+            raise exceptions.ApiError(response)
         self.logger.info('Found %s suppliers', len(self.suppliers), extra={'suppliers': response})
         self.supplier_url_map = {
             supplier.id: supplier.endpoint for supplier in self.suppliers
