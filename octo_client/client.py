@@ -22,6 +22,7 @@ class OctoClient(object):
         self.suppliers: List[models.Supplier] = []
         self.supplier_url_map: Dict[str, str] = {}
         self.requests_loglevel = logging.DEBUG
+        self.log_responses = False
 
     @staticmethod
     def _raise_for_status(status_code: int, response_content: str) -> None:
@@ -58,7 +59,13 @@ class OctoClient(object):
             response_json = response.json()
         except Exception:
             raise exceptions.ApiError('Non-JSON response')
-        self.logger.log(self.requests_loglevel, 'Got response from %s (%s)', full_url, http_method.__name__.upper())
+        self.logger.log(
+            self.requests_loglevel,
+            'Got response from %s (%s)',
+            full_url,
+            http_method.__name__.upper(),
+            extra={"response": response_json} if self.log_responses else None
+        )
         return response_json
 
     def _get_headers(self) -> Dict[str, str]:
@@ -78,7 +85,10 @@ class OctoClient(object):
         This list MAY be limited based on the suppliers that the authenticated user has been granted access to.
         '''
         response = self._http_get('suppliers')
-        self.suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
+        try:
+            self.suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
+        except AttributeError:
+            raise exceptions.ApiError(response)
         self.logger.info('Found %s suppliers', len(self.suppliers), extra={'suppliers': response})
         self.supplier_url_map = {
             supplier.id: supplier.endpoint for supplier in self.suppliers
