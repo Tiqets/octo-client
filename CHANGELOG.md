@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7
+
+- Replacing dacite with tonalite
+
 ## 0.1.6
 
 - Fix handle attribute error when supplier return internal error with status code 200.

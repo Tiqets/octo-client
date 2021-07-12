@@ -2,12 +2,9 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
-from unittest.mock import patch
 
 import attr
-from dacite import Config, from_dict
-
-from .dacite_patch import _build_value
+from tonalite import Config, from_dict
 
 
 @dataclass
@@ -50,8 +47,7 @@ class BaseModel:
         data['extra_fields'] = {}
         for extra_field in extra_fields:
             data['extra_fields'][extra_field] = data.pop(extra_field)
-        with patch('dacite.core._build_value', side_effect=_build_value):
-            return from_dict(data_class=cls, data=data, config=config)
+        return from_dict(cls, data=data, config=config)
 
 
 @dataclass
