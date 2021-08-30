@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8
+
+- Remove responses that exceed DD limit.
+
 ## 0.1.7
 
 - Replacing dacite with tonalite

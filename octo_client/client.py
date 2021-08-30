@@ -9,6 +9,8 @@ from octo_client import exceptions, models
 logger = logging.getLogger('octo_client')
 logger.setLevel(logging.INFO)
 
+DATADOG_LOG_SIZE_LIMIT = 8192
+
 
 class OctoClient(object):
     """
@@ -56,7 +58,10 @@ class OctoClient(object):
         )
         self._raise_for_status(response.status_code, response.content)
         try:
-            response_json = response.json()
+            if len(response.text) > DATADOG_LOG_SIZE_LIMIT:
+                response_json = 'TRUNCATED'
+            else:
+                response_json = response.json()
         except Exception:
             raise exceptions.ApiError('Non-JSON response')
         self.logger.log(
