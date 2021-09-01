@@ -1,6 +1,6 @@
 from datetime import date
 import logging
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 import requests
 
@@ -9,15 +9,19 @@ from octo_client import exceptions, models
 logger = logging.getLogger('octo_client')
 logger.setLevel(logging.INFO)
 
-DATADOG_LOG_SIZE_LIMIT = 8192
-
 
 class OctoClient(object):
     """
     HTTP client for OCTo (Open Connection for Tourism) APIs.
     """
 
-    def __init__(self, url: str, token: str, custom_logger: logging.Logger = None) -> None:
+    def __init__(
+        self,
+        url: str,
+        token: str,
+        custom_logger: logging.Logger = None,
+        log_size_limit: Optional[int] = None,
+    ) -> None:
         self.url = url.rstrip('/')
         self.token = token
         self.logger = custom_logger or logger
@@ -25,6 +29,7 @@ class OctoClient(object):
         self.supplier_url_map: Dict[str, str] = {}
         self.requests_loglevel = logging.DEBUG
         self.log_responses = False
+        self.log_size_limit = log_size_limit
 
     @staticmethod
     def _raise_for_status(status_code: int, response_content: str) -> None:
@@ -58,7 +63,7 @@ class OctoClient(object):
         )
         self._raise_for_status(response.status_code, response.content)
         try:
-            if len(response.text) > DATADOG_LOG_SIZE_LIMIT:
+            if self.log_size_limit and len(response.text) > self.log_size_limit:
                 response_json = 'TRUNCATED'
             else:
                 response_json = response.json()
