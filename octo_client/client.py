@@ -29,6 +29,7 @@ class OctoClient(object):
         self.supplier_url_map: Dict[str, str] = {}
         self.requests_loglevel = logging.DEBUG
         self.log_responses = False
+        self.log_size_limit: Optional[int] = None
         self.log_size_limit = log_size_limit
 
     @staticmethod
