@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9
+
+- moved log size limit to an optional variable set when initializing client.
+
 ## 0.1.8
 
 - Remove responses that exceed DD limit.
