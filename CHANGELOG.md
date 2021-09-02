@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+
+- fix for logging issue when logs exceeded log_size_limit.
+
 ## 0.1.9
 
 - moved log size limit to an optional variable set when initializing client.
