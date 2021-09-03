@@ -21,13 +21,14 @@ class OctoClient(object):
         token: str,
         custom_logger: logging.Logger = None,
         log_size_limit: Optional[int] = None,
+        requests_loglevel: int = logging.DEBUG,
     ) -> None:
         self.url = url.rstrip('/')
         self.token = token
         self.logger = custom_logger or logger
         self.suppliers: List[models.Supplier] = []
         self.supplier_url_map: Dict[str, str] = {}
-        self.requests_loglevel = logging.DEBUG
+        self.requests_loglevel = requests_loglevel
         self.log_responses = False
         self.log_size_limit = log_size_limit
 
@@ -69,9 +70,9 @@ class OctoClient(object):
                 response_text = response.text
                 if self.log_size_limit and len(response_text) > self.log_size_limit:
                     response_text = 'TRUNCATED'
-                extra = {'response': response_text}
+                extra: Dict[str, Union[None, str, dict]] = {'response': response_text}
             else:
-                extra = None
+                extra = {"response": None}
             self.logger.info(
                 self.requests_loglevel,
                 'Received non-JSON response',
@@ -79,7 +80,7 @@ class OctoClient(object):
             )
             raise exceptions.ApiError('Non-JSON response')
         if not self.log_responses:
-            extra: Dict[str, Union[None, str, dict]] = {"response": None}
+            extra = {"response": None}
         elif self.log_size_limit and len(response.text) > self.log_size_limit:
             extra = {"response": "TRUNCATED"}
         else:
