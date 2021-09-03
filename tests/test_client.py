@@ -1,5 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 import json
+import logging
+from typing import List, Optional, Union
 
 import pytest
 import responses
@@ -123,6 +125,19 @@ BOOKING_MODEL = m.Booking.from_dict({
     'supplierReference': 'ABC-123',
     'refreshFrequency': 'HOURLY',
 })
+
+
+AVAILABILITY_RESPONSE_LOG = [
+        {
+            'extra_fields': {},
+            'id': '2020-12-01T15:30:00-08:00',
+            'localDateTimeStart': '2020-12-01T15:30:00-08:00',
+            'localDateTimeEnd': '2020-12-01T17:30:00-08:00',
+            'status': 'AVAILABLE',
+            'vacancies': 14,
+
+        }
+    ]
 
 
 def test_suppliers_list(client: OctoClient, mocked_responses):
@@ -426,7 +441,8 @@ def test_availability(client: OctoClient, mocked_responses):
     )
 
 
-def test_test_availability(client: OctoClient, mocked_responses):
+def test_request_json_for_availability(client: OctoClient, mocked_responses):
+    # GIVEN
     mocked_responses.add(responses.POST, 'https://api.my-booking-platform.com/v1/suppliers/0001/availability', json=[
         {
             'id': '2020-12-01T15:30:00-08:00',
@@ -436,25 +452,17 @@ def test_test_availability(client: OctoClient, mocked_responses):
             'vacancies': 14,
         }
     ])
-    availability = client.test_availability(
+
+    # WHEN
+    client.test_availability(
         supplier_id='0001',
         product_id='bar',
         option_id='baz',
         availability_ids=['2020-12-01T15:30:00-08:00'],
         units=[m.UnitQuantity(unitId='adult', quantity=2, extra_fields={})],
     )
-    assert availability == [
-        m.AvailabilityItem(
-            id='2020-12-01T15:30:00-08:00',
-            localDateTimeStart=datetime(2020, 12, 1, 15, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
-            localDateTimeEnd=datetime(2020, 12, 1, 17, 30, tzinfo=timezone(timedelta(days=-1, seconds=57600))),
-            status='AVAILABLE',
-            vacancies=14,
-            extra_fields={},
-        )
-    ]
-    assert len(mocked_responses.calls) == 2, 'Too many requests'
-    assert mocked_responses.calls[1].request.url == 'https://api.my-booking-platform.com/v1/suppliers/0001/availability'
+
+    # THEN
     request_json = json.loads(mocked_responses.calls[1].request.body)
     assert request_json == {
         'productId': 'bar',
@@ -465,6 +473,49 @@ def test_test_availability(client: OctoClient, mocked_responses):
             'quantity': 2
         }]
     }
+
+
+@pytest.mark.parametrize('log_responses, log_size_limit, result', [
+    (False, False, None),
+    (True, 8192, AVAILABILITY_RESPONSE_LOG),
+    (False, 10, None),
+    (True, 10, "TRUNCATED"),
+    (True, False, AVAILABILITY_RESPONSE_LOG)]
+)
+def test_availability_logs_cut_if_over_log_size_limit(
+    client: OctoClient,
+    caplog,
+    mocked_responses,
+    log_responses: bool,
+    log_size_limit: Optional[int],
+    result: Union[List, str, bool],
+):
+    # GIVEN
+    client.log_responses = log_responses
+    client.log_size_limit = log_size_limit
+    client.logger.setLevel(logging.DEBUG)
+
+    mocked_responses.add(responses.POST, 'https://api.my-booking-platform.com/v1/suppliers/0001/availability', json=[
+        {
+            'id': '2020-12-01T15:30:00-08:00',
+            'localDateTimeStart': '2020-12-01T15:30:00-08:00',
+            'localDateTimeEnd': '2020-12-01T17:30:00-08:00',
+            'status': 'AVAILABLE',
+            'vacancies': 14,
+        }
+    ])
+
+    # WHEN
+    client.test_availability(
+        supplier_id='0001',
+        product_id='bar',
+        option_id='baz',
+        availability_ids=['2020-12-01T15:30:00-08:00'],
+        units=[m.UnitQuantity(unitId='adult', quantity=2, extra_fields={})],
+    )
+
+    # THEN
+    assert caplog.records[4].response == result
 
 
 def test_create_booking(client: OctoClient, mocked_responses):

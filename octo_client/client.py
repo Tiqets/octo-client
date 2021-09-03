@@ -1,6 +1,6 @@
 from datetime import date
 import logging
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 import requests
 
@@ -21,13 +21,14 @@ class OctoClient(object):
         token: str,
         custom_logger: logging.Logger = None,
         log_size_limit: Optional[int] = None,
+        requests_loglevel: int = logging.DEBUG,
     ) -> None:
         self.url = url.rstrip('/')
         self.token = token
         self.logger = custom_logger or logger
         self.suppliers: List[models.Supplier] = []
         self.supplier_url_map: Dict[str, str] = {}
-        self.requests_loglevel = logging.DEBUG
+        self.requests_loglevel = requests_loglevel
         self.log_responses = False
         self.log_size_limit = log_size_limit
 
@@ -63,18 +64,33 @@ class OctoClient(object):
         )
         self._raise_for_status(response.status_code, response.content)
         try:
-            if self.log_size_limit and len(response.text) > self.log_size_limit:
-                response_json = 'TRUNCATED'
-            else:
-                response_json = response.json()
+            response_json = response.json()
         except Exception:
+            if self.log_responses:
+                response_text = response.text
+                if self.log_size_limit and len(response_text) > self.log_size_limit:
+                    response_text = 'TRUNCATED'
+                extra: Dict[str, Union[None, str, dict]] = {'response': response_text}
+            else:
+                extra = {"response": None}
+            self.logger.info(
+                self.requests_loglevel,
+                'Received non-JSON response',
+                extra=extra,
+            )
             raise exceptions.ApiError('Non-JSON response')
+        if not self.log_responses:
+            extra = {"response": None}
+        elif self.log_size_limit and len(response.text) > self.log_size_limit:
+            extra = {"response": "TRUNCATED"}
+        else:
+            extra = {"response": response_json}
         self.logger.log(
             self.requests_loglevel,
             'Got response from %s (%s)',
             full_url,
             http_method.__name__.upper(),
-            extra={"response": response_json} if self.log_responses else None
+            extra=extra
         )
         return response_json
 
