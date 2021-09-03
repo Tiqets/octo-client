@@ -65,17 +65,18 @@ class OctoClient(object):
         try:
             response_json = response.json()
         except Exception:
-            if self.log_responses and self.log_size_limit and len(response.text) > self.log_size_limit:
-                self.logger.info(
-                    self.requests_loglevel,
-                    'Received non-JSON response. It was truncated due to size limit restrictions.'
-                )
+            if self.log_responses:
+                response_text = response.text
+                if self.log_size_limit and len(response_text) > self.log_size_limit:
+                    response_text = 'TRUNCATED'
+                extra = {'response': response_text}
             else:
-                self.logger.info(
-                    self.requests_loglevel,
-                    'Received non-JSON response',
-                    extra=response if self.log_responses else None,
-                )
+                extra = None
+            self.logger.info(
+                self.requests_loglevel,
+                'Received non-JSON response',
+                extra=extra,
+            )
             raise exceptions.ApiError('Non-JSON response')
         if not self.log_responses:
             extra: Dict[str, Union[None, str, dict]] = {"response": None}
