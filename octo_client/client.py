@@ -1,4 +1,3 @@
-import json
 from datetime import date
 import logging
 from typing import Callable, Dict, List, Optional, Union
@@ -70,7 +69,7 @@ class OctoClient(object):
             self.logger.info(
                 self.requests_loglevel,
                 'Received non-JSON response',
-                extra={"response": self._filter_log_data(response_length=len(response.text), response_content=response.text)}
+                extra={"response": self._filter_log_data(len(response.text), response.text)}
             )
             raise exceptions.ApiError('Non-JSON response')
         self.logger.log(
@@ -78,7 +77,7 @@ class OctoClient(object):
             'Got response from %s (%s)',
             full_url,
             http_method.__name__.upper(),
-            extra={"response": self._filter_log_data(response_length=len(response.text), response_content=response_json)}
+            extra={"response": self._filter_log_data(len(response.text), response_json)}
         )
         return response_json
 
@@ -87,6 +86,7 @@ class OctoClient(object):
             if self.log_size_limit and response_length > self.log_size_limit:
                 return 'TRUNCATED'
             return response_content
+        return None
 
     def _get_headers(self) -> Dict[str, str]:
         return {'Authorization': f'Bearer {self.token}'}
@@ -146,7 +146,7 @@ class OctoClient(object):
             params.update(extra_fields)
         response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params=params)
         daily_availability = [models.AvailabilityCalendarItem.from_dict(availability) for availability in response]
-        self.logger.info('Found %s days', len(daily_availability), extra={'calendar': self._filter_log_data(response_length=len(json.dumps(response)), response_content=response)})
+        self.logger.info('Found %s days', len(daily_availability))
         return daily_availability
 
     def get_availability(
@@ -191,7 +191,7 @@ class OctoClient(object):
             params.update(extra_fields)
         response = self._http_get(f'suppliers/{supplier_id}/availability', params=params)
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
-        self.logger.info('Found %s items', len(detailed_availability), extra={'availability': self._filter_log_data(response_length=len(json.dumps(response)), response_content=response)})
+        self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
 
     def test_availability(
@@ -221,7 +221,7 @@ class OctoClient(object):
             json_data.update(extra_fields)
         response = self._http_post(f'suppliers/{supplier_id}/availability', json=json_data)
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
-        self.logger.info('Found %s items', len(detailed_availability), extra={'availability': response})
+        self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
 
     def create_booking(
@@ -239,7 +239,7 @@ class OctoClient(object):
         and ErrorCode 1005 in such case.
         '''
         response = self._http_post(f'suppliers/{supplier_id}/bookings', json=booking_request.as_dict())
-        self.logger.info('Booking created', extra={'booking': self._filter_log_data(response_length=len(json.dumps(response)), response_content=response)})
+        self.logger.info('Booking created', extra={'booking': response})
         return models.Booking.from_dict(response)
 
     def confirm_booking(
@@ -259,7 +259,7 @@ class OctoClient(object):
             f'suppliers/{supplier_id}/bookings/{uuid}/confirm',
             json=confirmation_request.as_dict(),
         )
-        self.logger.info('Booking confirmed', extra={'booking': self._filter_log_data(response_length=len(json.dumps(response)), response_content=response)})
+        self.logger.info('Booking confirmed', extra={'booking': response})
         return models.Booking.from_dict(response)
 
     def get_booking_details(self, supplier_id: str, uuid: str) -> models.Booking:
@@ -268,7 +268,7 @@ class OctoClient(object):
         the initial createBooking request is processed successfully and it MUST return the booking object.
         '''
         response = self._http_get(f'suppliers/{supplier_id}/bookings/{uuid}')
-        self.logger.info('Got booking details', extra={'booking': self._filter_log_data(response_length=len(json.dumps(response)), response_content=response)})
+        self.logger.info('Got booking details', extra={'booking': response})
         return models.Booking.from_dict(response)
 
     def delete_booking(
@@ -294,5 +294,5 @@ class OctoClient(object):
         if extra_fields:
             json_data.update(extra_fields)
         response = self._http_post(f'suppliers/{supplier_id}/bookings/{uuid}/cancel', json=json_data)
-        self.logger.info('Booking removed', extra={'booking': self._filter_log_data(response_length=len(response.text), response_content=response)})
+        self.logger.info('Booking removed', extra={'booking': response})
         return models.Booking.from_dict(response)

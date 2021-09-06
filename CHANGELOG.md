@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+- more fixes to for logging issue when logs exceeded log_size_limit.
+
 ## 1.0.0
 
 - fix for logging issue when logs exceeded log_size_limit.
