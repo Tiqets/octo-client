@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Correct typing in _raise_for_status method.
+
 ## 1.0.1
 
 - more fixes to for logging issue when logs exceeded log_size_limit.

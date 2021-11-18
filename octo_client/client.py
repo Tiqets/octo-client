@@ -33,7 +33,7 @@ class OctoClient(object):
         self.log_size_limit = log_size_limit
 
     @staticmethod
-    def _raise_for_status(status_code: int, response_content: str) -> None:
+    def _raise_for_status(status_code: int, response_content: bytes) -> None:
         CODE_EXCEPTION_MAP = {
             400: exceptions.InvalidRequest,
             403: exceptions.Unauthorized,

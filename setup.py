@@ -9,7 +9,7 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='OCTo-API-client',
-    version='1.0.1',
+    version='1.0.2',
     description='HTTP client for OCTo (Open Connection for Tourism) APIs.',
     long_description=long_description,
     long_description_content_type='text/markdown',
