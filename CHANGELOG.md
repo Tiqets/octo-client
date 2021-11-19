@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- Change of argument type in raise_for_status method from bytes to string.
+- _raise_for_status will now receive response.text instead of response.content
+
 ## 1.0.1
 
 - more fixes to for logging issue when logs exceeded log_size_limit.

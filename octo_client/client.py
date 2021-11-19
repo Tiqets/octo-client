@@ -33,7 +33,7 @@ class OctoClient(object):
         self.log_size_limit = log_size_limit
 
     @staticmethod
-    def _raise_for_status(status_code: int, response_content: str) -> None:
+    def _raise_for_status(status_code: int, response_text: str) -> None:
         CODE_EXCEPTION_MAP = {
             400: exceptions.InvalidRequest,
             403: exceptions.Unauthorized,
@@ -41,7 +41,7 @@ class OctoClient(object):
             500: exceptions.ApiError,
         }
         if status_code in CODE_EXCEPTION_MAP:
-            raise CODE_EXCEPTION_MAP[status_code](response_content)
+            raise CODE_EXCEPTION_MAP[status_code](response_text)
 
     def _make_request(self, http_method: Callable, path: str, json=None, params=None):
         if path.startswith('suppliers/'):
@@ -62,7 +62,7 @@ class OctoClient(object):
             json=json,
             headers=self._get_headers(),
         )
-        self._raise_for_status(response.status_code, response.content)
+        self._raise_for_status(response.status_code, response.text)
         try:
             response_json = response.json()
         except Exception:
