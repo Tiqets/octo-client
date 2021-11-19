@@ -2,7 +2,8 @@
 
 ## 1.0.2
 
-- Correct typing in _raise_for_status method.
+- Change of argument type in raise_for_status method from bytes to string.
+- _raise_for_status will now receive response.text instead of response.content
 
 ## 1.0.1
 
