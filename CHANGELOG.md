@@ -1,5 +1,10 @@
 # Changelog
 
+
+## 1.0.3
+
+- Automatic release of package on merge to master.
+
 ## 1.0.2
 
 - Change of argument type in raise_for_status method from bytes to string.
