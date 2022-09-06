@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.4
+
+- Fix for logging when receiving a non-JSON response
 
 ## 1.0.3
 
