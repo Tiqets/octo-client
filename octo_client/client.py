@@ -66,7 +66,7 @@ class OctoClient(object):
         try:
             response_json = response.json()
         except Exception:
-            self.logger.info(
+            self.logger.log(
                 self.requests_loglevel,
                 'Received non-JSON response',
                 extra={"response": self._filter_log_data(len(response.text), response.text)}
