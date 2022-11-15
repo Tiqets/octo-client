@@ -43,7 +43,7 @@ class OctoClient(object):
         if status_code in CODE_EXCEPTION_MAP:
             raise CODE_EXCEPTION_MAP[status_code](response_text)
 
-    def _make_request(self, http_method: Callable, path: str, json=None, params=None):
+    def _make_request(self, http_method: Callable, path: str, json=None, params=None, **kwargs):
         if path.startswith('suppliers/'):
             supplier_id = path.split('/')[1]
             if not self.suppliers:
@@ -56,11 +56,16 @@ class OctoClient(object):
         else:
             full_url = f'{self.url}/{path}'
         self.logger.log(self.requests_loglevel, 'Sending request to %s (%s)', full_url, http_method.__name__.upper())
+
+        headers: Dict[str, str] = self._get_headers()
+        if kwargs.get("headers", {}):
+            headers.update(kwargs.get("headers", {}))
+
         response = http_method(
             full_url,
             params=params or {},
             json=json,
-            headers=self._get_headers(),
+            headers=headers,
         )
         self._raise_for_status(response.status_code, response.text)
         try:
@@ -91,14 +96,14 @@ class OctoClient(object):
     def _get_headers(self) -> Dict[str, str]:
         return {'Authorization': f'Bearer {self.token}'}
 
-    def _http_get(self, path: str, params=None):
-        return self._make_request(requests.get, path, params=params)
+    def _http_get(self, path: str, params=None, **kwargs):
+        return self._make_request(requests.get, path, params=params, **kwargs)
 
-    def _http_post(self, path: str, json: dict, params=None):
-        return self._make_request(requests.post, path, json=json, params=params)
+    def _http_post(self, path: str, json: dict, params=None, **kwargs):
+        return self._make_request(requests.post, path, json=json, params=params, **kwargs)
 
-    def _http_delete(self, path: str, params=None):
-        return self._make_request(requests.delete, path, params=params)
+    def _http_delete(self, path: str, params=None, **kwargs):
+        return self._make_request(requests.delete, path, params=params, **kwargs)
 
     def get_suppliers(self) -> List[models.Supplier]:
         '''
@@ -132,6 +137,7 @@ class OctoClient(object):
         start_date: date,
         end_date: date,
         extra_fields: dict = None,
+        **kwargs,
     ) -> List[models.AvailabilityCalendarItem]:
         '''
         Returns an availability for given product and option.
@@ -144,7 +150,7 @@ class OctoClient(object):
         }
         if extra_fields:
             params.update(extra_fields)
-        response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params=params)
+        response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params=params, **kwargs)
         daily_availability = [models.AvailabilityCalendarItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s days', len(daily_availability))
         return daily_availability
@@ -157,6 +163,7 @@ class OctoClient(object):
         start_date: date,
         end_date: date,
         extra_fields: dict = None,
+        **kwargs,
     ) -> List[models.AvailabilityItem]:
         '''
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
@@ -189,7 +196,7 @@ class OctoClient(object):
         }
         if extra_fields:
             params.update(extra_fields)
-        response = self._http_get(f'suppliers/{supplier_id}/availability', params=params)
+        response = self._http_get(f'suppliers/{supplier_id}/availability', params=params, **kwargs)
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
@@ -202,6 +209,7 @@ class OctoClient(object):
         availability_ids: List[str],
         units: List[models.UnitQuantity],
         extra_fields: dict = None,
+        **kwargs
     ) -> List[models.AvailabilityItem]:
         '''
         This request is intended to provide the Booking Platform a complete view of the Unit IDs, Unit quantity,
@@ -214,12 +222,16 @@ class OctoClient(object):
         json_data = {
             'productId': product_id,
             'optionId': option_id,
-            'availabilityIds': availability_ids,
             'units': [unit.as_dict() for unit in units],
         }
+
+        if availability_ids:
+            json_data['availabilityIds'] = availability_ids
+
         if extra_fields:
             json_data.update(extra_fields)
-        response = self._http_post(f'suppliers/{supplier_id}/availability', json=json_data)
+
+        response = self._http_post(f'suppliers/{supplier_id}/availability', json=json_data, **kwargs)
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability

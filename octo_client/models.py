@@ -141,7 +141,7 @@ class UnitItem(BaseModel):
 
 @dataclass
 class UnitQuantity(BaseModel):
-    unitId: str
+    id: str
     quantity: int
     extra_fields: Optional[dict] = field(default_factory=dict)
 

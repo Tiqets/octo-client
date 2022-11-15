@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- rename `UnitQuantity.unitId` to `UnitQuantity.id`
+- add support for passing headers to some client methods
+
 ## 1.0.4
 
 - Fix for logging when receiving a non-JSON response

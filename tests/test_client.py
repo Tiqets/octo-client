@@ -459,7 +459,7 @@ def test_request_json_for_availability(client: OctoClient, mocked_responses):
         product_id='bar',
         option_id='baz',
         availability_ids=['2020-12-01T15:30:00-08:00'],
-        units=[m.UnitQuantity(unitId='adult', quantity=2, extra_fields={})],
+        units=[m.UnitQuantity(id='adult', quantity=2, extra_fields={})],
     )
 
     # THEN
@@ -469,7 +469,7 @@ def test_request_json_for_availability(client: OctoClient, mocked_responses):
         'optionId': 'baz',
         'availabilityIds': ['2020-12-01T15:30:00-08:00'],
         'units': [{
-            'unitId': 'adult',
+            'id': 'adult',
             'quantity': 2
         }]
     }
@@ -511,7 +511,7 @@ def test_availability_logs_cut_if_over_log_size_limit(
         product_id='bar',
         option_id='baz',
         availability_ids=['2020-12-01T15:30:00-08:00'],
-        units=[m.UnitQuantity(unitId='adult', quantity=2, extra_fields={})],
+        units=[m.UnitQuantity(id='adult', quantity=2, extra_fields={})],
     )
 
     # THEN
