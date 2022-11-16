@@ -3,6 +3,9 @@
 ## 1.0.5
 
 - rename `UnitQuantity.unitId` to `UnitQuantity.id`
+- deprecate the method `test_availbility()` in favour of `fetch_availbility()`
+- add a new method `fetch_availbility()` to request availability via an HTTP POST request.
+- add a new optional argument `capabilities` to the method `get_availability()` to support the `octo-capabilitie` header.
 - add support for passing headers to some client methods
 
 ## 1.0.4

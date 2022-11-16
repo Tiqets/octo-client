@@ -13,6 +13,8 @@ logger.setLevel(logging.INFO)
 class OctoClient(object):
     """
     HTTP client for OCTo (Open Connection for Tourism) APIs.
+
+    This supports version: https://docs.octo.travel/docs/octo/r6gduoa5ah5ne-octo-api
     """
 
     def __init__(
@@ -44,6 +46,8 @@ class OctoClient(object):
             raise CODE_EXCEPTION_MAP[status_code](response_text)
 
     def _make_request(self, http_method: Callable, path: str, json=None, params=None, **kwargs):
+        full_url = f'{self.url}/{path}'
+
         if path.startswith('suppliers/'):
             supplier_id = path.split('/')[1]
             if not self.suppliers:
@@ -52,14 +56,14 @@ class OctoClient(object):
                 endpoint_url = self.supplier_url_map[supplier_id]
             except KeyError:
                 raise exceptions.InvalidRequest('Incorrect supplierId')
+
             full_url = f'{endpoint_url}/{path}'
-        else:
-            full_url = f'{self.url}/{path}'
+
         self.logger.log(self.requests_loglevel, 'Sending request to %s (%s)', full_url, http_method.__name__.upper())
 
         headers: Dict[str, str] = self._get_headers()
-        if kwargs.get("headers", {}):
-            headers.update(kwargs.get("headers", {}))
+        if kwargs.get('headers', {}):
+            headers.update(kwargs.get('headers', {}))
 
         response = http_method(
             full_url,
@@ -67,6 +71,7 @@ class OctoClient(object):
             json=json,
             headers=headers,
         )
+
         self._raise_for_status(response.status_code, response.text)
         try:
             response_json = response.json()
@@ -95,6 +100,10 @@ class OctoClient(object):
 
     def _get_headers(self) -> Dict[str, str]:
         return {'Authorization': f'Bearer {self.token}'}
+
+    @staticmethod
+    def _get_capabilities_header(capabilities: List[str]) -> Dict[str, str]:
+        return {'OCTO-Capabilities': ','.join(capabilities)} if capabilities else {}
 
     def _http_get(self, path: str, params=None, **kwargs):
         return self._make_request(requests.get, path, params=params, **kwargs)
@@ -137,7 +146,7 @@ class OctoClient(object):
         start_date: date,
         end_date: date,
         extra_fields: dict = None,
-        **kwargs,
+        capabilities: List[str] | None = None
     ) -> List[models.AvailabilityCalendarItem]:
         '''
         Returns an availability for given product and option.
@@ -150,7 +159,11 @@ class OctoClient(object):
         }
         if extra_fields:
             params.update(extra_fields)
-        response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params=params, **kwargs)
+        response = self._http_get(
+            f'suppliers/{supplier_id}/availability/calendar',
+            params=params,
+            headers=self._get_capabilities_header(capabilities),
+        )
         daily_availability = [models.AvailabilityCalendarItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s days', len(daily_availability))
         return daily_availability
@@ -163,9 +176,9 @@ class OctoClient(object):
         start_date: date,
         end_date: date,
         extra_fields: dict = None,
-        **kwargs,
+        capabilities: List[str] | None = None
     ) -> List[models.AvailabilityItem]:
-        '''
+        """
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
 
         If the product's availabilityType is OPENING_HOURS then the localDateTimeStart and localDateTimeEnd
@@ -187,16 +200,22 @@ class OctoClient(object):
         CLOSED: Currently not available for sale, but not sold out (e.g. temporarily on stop-sell)
                 and may be available for sale soon. Refresh no more than once/12 hours.
 
-        '''
+        """
         params = {
             'productId': product_id,
             'optionId': option_id,
             'localDateStart': start_date.isoformat(),
             'localDateEnd': end_date.isoformat(),
         }
+
         if extra_fields:
             params.update(extra_fields)
-        response = self._http_get(f'suppliers/{supplier_id}/availability', params=params, **kwargs)
+
+        response = self._http_get(
+            f'suppliers/{supplier_id}/availability',
+            params=params,
+            headers=self._get_capabilities_header(capabilities),
+        )
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
@@ -209,7 +228,7 @@ class OctoClient(object):
         availability_ids: List[str],
         units: List[models.UnitQuantity],
         extra_fields: dict = None,
-        **kwargs
+        capabilities: List[str] | None = None
     ) -> List[models.AvailabilityItem]:
         """
         This method will perform a HTTP POST request to the availability endpoint.
@@ -227,7 +246,11 @@ class OctoClient(object):
         if extra_fields:
             json_data.update(extra_fields)
 
-        response = self._http_post(f'suppliers/{supplier_id}/availability', json=json_data, **kwargs)
+        response = self._http_post(
+            f'suppliers/{supplier_id}/availability',
+            json=json_data,
+            headers=self._get_capabilities_header(capabilities),
+        )
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
@@ -249,6 +272,8 @@ class OctoClient(object):
         answer to the Reseller about whether the requested booking configuration could be accepted by the Supplier.
         This is to support complex booking requirements without the Reseller needing to know the details
         of the restriction (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
+
+        WARNING!: this is deprecated. Use `fetch_availability()` instead.
         """
 
         return self.fetch_availability(
