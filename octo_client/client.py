@@ -146,7 +146,7 @@ class OctoClient(object):
         start_date: date,
         end_date: date,
         extra_fields: dict = None,
-        capabilities: List[str] | None = None
+        capabilities: Optional[List[str]] = None,
     ) -> List[models.AvailabilityCalendarItem]:
         '''
         Returns an availability for given product and option.
@@ -162,7 +162,7 @@ class OctoClient(object):
         response = self._http_get(
             f'suppliers/{supplier_id}/availability/calendar',
             params=params,
-            headers=self._get_capabilities_header(capabilities),
+            headers=self._get_capabilities_header(capabilities or []),
         )
         daily_availability = [models.AvailabilityCalendarItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s days', len(daily_availability))
@@ -176,7 +176,7 @@ class OctoClient(object):
         start_date: date,
         end_date: date,
         extra_fields: dict = None,
-        capabilities: List[str] | None = None
+        capabilities: Optional[List[str]] = None,
     ) -> List[models.AvailabilityItem]:
         """
         For any dates which are never available for booking, the response MUST exclude those dates entirely.
@@ -214,7 +214,7 @@ class OctoClient(object):
         response = self._http_get(
             f'suppliers/{supplier_id}/availability',
             params=params,
-            headers=self._get_capabilities_header(capabilities),
+            headers=self._get_capabilities_header(capabilities or []),
         )
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability))
@@ -228,7 +228,7 @@ class OctoClient(object):
         availability_ids: List[str],
         units: List[models.UnitQuantity],
         extra_fields: dict = None,
-        capabilities: List[str] | None = None
+        capabilities: Optional[List[str]] = None,
     ) -> List[models.AvailabilityItem]:
         """
         This method will perform a HTTP POST request to the availability endpoint.
@@ -249,7 +249,7 @@ class OctoClient(object):
         response = self._http_post(
             f'suppliers/{supplier_id}/availability',
             json=json_data,
-            headers=self._get_capabilities_header(capabilities),
+            headers=self._get_capabilities_header(capabilities or []),
         )
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability))
