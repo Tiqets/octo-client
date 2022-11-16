@@ -201,7 +201,7 @@ class OctoClient(object):
         self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
 
-    def test_availability(
+    def fetch_availability(
         self,
         supplier_id: str,
         product_id: str,
@@ -211,14 +211,10 @@ class OctoClient(object):
         extra_fields: dict = None,
         **kwargs
     ) -> List[models.AvailabilityItem]:
-        '''
-        This request is intended to provide the Booking Platform a complete view of the Unit IDs, Unit quantity,
-        and Availability IDs so that additional restrictions and policies can be validated within
-        the Booking Platform prior to making a Booking. The purpose is to provide a clear and accurate
-        answer to the Reseller about whether the requested booking configuration could be accepted by the Supplier.
-        This is to support complex booking requirements without the Reseller needing to know the details
-        of the restriction (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
-        '''
+        """
+        This method will perform a HTTP POST request to the availability endpoint.
+        """
+
         json_data = {
             'productId': product_id,
             'optionId': option_id,
@@ -235,6 +231,29 @@ class OctoClient(object):
         detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
         self.logger.info('Found %s items', len(detailed_availability))
         return detailed_availability
+
+    def test_availability(
+        self,
+        supplier_id: str,
+        product_id: str,
+        option_id: str,
+        availability_ids: List[str],
+        units: List[models.UnitQuantity],
+        extra_fields: dict = None,
+        **kwargs
+    ) -> List[models.AvailabilityItem]:
+        """
+        This request is intended to provide the Booking Platform a complete view of the Unit IDs, Unit quantity,
+        and Availability IDs so that additional restrictions and policies can be validated within
+        the Booking Platform prior to making a Booking. The purpose is to provide a clear and accurate
+        answer to the Reseller about whether the requested booking configuration could be accepted by the Supplier.
+        This is to support complex booking requirements without the Reseller needing to know the details
+        of the restriction (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
+        """
+
+        return self.fetch_availability(
+            supplier_id, product_id, option_id, availability_ids, units, extra_fields, **kwargs
+        )
 
     def create_booking(
         self,
