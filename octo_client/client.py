@@ -129,11 +129,17 @@ class OctoClient(object):
         }
         return self.suppliers
 
-    def get_products(self, supplier_id: str) -> List[models.Product]:
-        '''
+    def get_products(self, supplier_id: str, capabilities: Optional[List[str]] = None) -> List[models.Product]:
+        """
         Contains all product details necessary to ingest, map, and sell.
-        '''
-        response = self._http_get(f'suppliers/{supplier_id}/products')
+
+        :param supplier_id: retrieve the products of this supplier.
+        :param capabilities: retrieve products that support these OCTo capabilities.
+        """
+        response = self._http_get(
+            f'suppliers/{supplier_id}/products',
+            headers=self._get_capabilities_header(capabilities or []),
+        )
         products = [models.Product.from_dict(product) for product in response]
         self.logger.info('Found %s products', len(products), extra={'products': products})
         return products
