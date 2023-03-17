@@ -1,0 +1,64 @@
+[
+    {
+        "id": "6b903d44-dc24-4ca4-ae71-6bde6c4f4854",
+        "internalName": "Amazon River Tour",
+        "reference": "AMZN",
+        "locale": "en-GB",
+        "timeZone": "Europe/London",
+        "allowFreesale": true,
+        "instantConfirmation": true,
+        "instantDelivery": true,
+        "availabilityRequired": true,
+        "availabilityType": "START_TIME",
+        "deliveryFormats": [
+            "QRCODE"
+        ],
+        "deliveryMethods": [
+            "VOUCHER"
+        ],
+        "redemptionMethod": "DIGITAL",
+        "options": [
+            {
+                "id": "DEFAULT",
+                "default": true,
+                "internalName": "Private Morning Tour",
+                "reference": "VIP-MORN",
+                "availabilityLocalStartTimes": [
+                    "09:00"
+                ],
+                "cancellationCutoff": "1 hour",
+                "cancellationCutoffAmount": 1,
+                "cancellationCutoffUnit": "hour",
+                "requiredContactFields": [
+                    "firstName"
+                ],
+                "restrictions": {
+                    "minUnits": null,
+                    "maxUnits": 10
+                },
+                "units": [
+                    {
+                        "id": "adult_697e3ce8-1860-4cbf-80ad-95857df1f640",
+                        "internalName": "Adult(s)",
+                        "reference": "LR1-01-new",
+                        "type": "YOUTH",
+                        "requiredContactFields": [
+                            "firstName"
+                        ],
+                        "restrictions": {
+                            "minAge": 3,
+                            "maxAge": 17,
+                            "idRequired": true,
+                            "minQuantity": 2,
+                            "maxQuantity": 7,
+                            "paxCount": 1,
+                            "accompaniedBy": [
+                                "adult_697e3ce8-1860-4cbf-80ad-95857df1f640"
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

@@ -1,12 +1,12 @@
-from datetime import date
 import logging
-from typing import Callable, Dict, List, Optional, Union
+from datetime import date
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import requests
 
 from octo_client import exceptions, models
 
-logger = logging.getLogger('octo_client')
+logger = logging.getLogger("octo_client")
 logger.setLevel(logging.INFO)
 
 
@@ -19,18 +19,34 @@ class OctoClient(object):
         self,
         url: str,
         token: str,
-        custom_logger: logging.Logger = None,
+        custom_logger: Optional[logging.Logger] = None,
         log_size_limit: Optional[int] = None,
         requests_loglevel: int = logging.DEBUG,
+        language: str = "en",
+        strict: bool = False,
     ) -> None:
-        self.url = url.rstrip('/')
+        """
+        Args:
+            url (str): URL under which the OCTO interface is available
+            token (str): secret bearer token for the authorization
+            custom_logger (Logger): custom logger which the client will use for logging
+            log_size_limit (int): max limit of the log size above which the log will be truncated
+            requests_loglevel (int): default log level that will be used to log requests and
+                                     responses
+            language (str): language that will be used in the Accept-Language header of each request
+            strict (bool): in the strict mode client will raise an error if the response will
+                           contain any additional data outside of the data model provided
+                           by the specification
+        """
+        self.url = url.rstrip("/")
         self.token = token
         self.logger = custom_logger or logger
-        self.suppliers: List[models.Supplier] = []
         self.supplier_url_map: Dict[str, str] = {}
         self.requests_loglevel = requests_loglevel
         self.log_responses = False
         self.log_size_limit = log_size_limit
+        self.language = language
+        self.strict = strict
 
     @staticmethod
     def _raise_for_status(status_code: int, response_text: str) -> None:
@@ -43,256 +59,418 @@ class OctoClient(object):
         if status_code in CODE_EXCEPTION_MAP:
             raise CODE_EXCEPTION_MAP[status_code](response_text)
 
-    def _make_request(self, http_method: Callable, path: str, json=None, params=None):
-        if path.startswith('suppliers/'):
-            supplier_id = path.split('/')[1]
-            if not self.suppliers:
+    def _make_request(
+        self,
+        http_method: Callable,
+        path: str,
+        supplier_id=None,
+        json=None,
+        params=None,
+        headers=None,
+    ):
+        if headers is None:
+            headers = {}
+        if supplier_id:
+            if supplier_id not in self.supplier_url_map:
                 self.get_suppliers()
             try:
                 endpoint_url = self.supplier_url_map[supplier_id]
-            except KeyError:
-                raise exceptions.InvalidRequest('Incorrect supplierId')
-            full_url = f'{endpoint_url}/{path}'
+            except KeyError as e:
+                raise exceptions.InvalidRequest("Incorrect supplierId") from e
+            full_url = f"{endpoint_url}/{path}"
         else:
-            full_url = f'{self.url}/{path}'
-        self.logger.log(self.requests_loglevel, 'Sending request to %s (%s)', full_url, http_method.__name__.upper())
+            full_url = f"{self.url}/{path}"
+        self.logger.log(
+            self.requests_loglevel,
+            "Sending request to %s (%s)",
+            full_url,
+            http_method.__name__.upper(),
+        )
+        base_headers = self._get_headers()
+        headers = {**base_headers, **headers}
         response = http_method(
             full_url,
             params=params or {},
             json=json,
-            headers=self._get_headers(),
+            headers=headers,
         )
         self._raise_for_status(response.status_code, response.text)
         try:
             response_json = response.json()
-        except Exception:
+        except Exception as exc:
             self.logger.log(
                 self.requests_loglevel,
-                'Received non-JSON response',
-                extra={"response": self._filter_log_data(len(response.text), response.text)}
+                "Received non-JSON response",
+                extra={"response": self._filter_log_data(len(response.text), response.text)},
             )
-            raise exceptions.ApiError('Non-JSON response')
+            raise exceptions.ApiError("Non-JSON response") from exc
         self.logger.log(
             self.requests_loglevel,
-            'Got response from %s (%s)',
+            "Got response from %s (%s)",
             full_url,
             http_method.__name__.upper(),
-            extra={"response": self._filter_log_data(len(response.text), response_json)}
+            extra={"response": self._filter_log_data(len(response.text), response_json)},
         )
         return response_json
 
-    def _filter_log_data(self, response_length: int, response_content: Union[str, dict]) -> Optional[Union[str, dict]]:
+    def _filter_log_data(
+        self, response_length: int, response_content: Union[str, dict]
+    ) -> Optional[Union[str, dict]]:
         if self.log_responses:
             if self.log_size_limit and response_length > self.log_size_limit:
-                return 'TRUNCATED'
+                return "TRUNCATED"
             return response_content
         return None
 
     def _get_headers(self) -> Dict[str, str]:
-        return {'Authorization': f'Bearer {self.token}'}
+        return {
+            "Authorization": f"Bearer {self.token}",
+            "Accept-Language": self.language,
+        }
 
-    def _http_get(self, path: str, params=None):
-        return self._make_request(requests.get, path, params=params)
+    def _http_get(self, path: str, supplier_id: Optional[str] = None, params=None):
+        return self._make_request(requests.get, path, supplier_id=supplier_id, params=params)
 
-    def _http_post(self, path: str, json: dict, params=None):
-        return self._make_request(requests.post, path, json=json, params=params)
+    def _http_post(self, path: str, json: dict, supplier_id: str, params=None):
+        return self._make_request(
+            requests.post,
+            path,
+            json=json,
+            supplier_id=supplier_id,
+            params=params,
+            headers={"Content-Type": "application/json"},
+        )
 
-    def _http_delete(self, path: str, params=None):
-        return self._make_request(requests.delete, path, params=params)
+    def _http_patch(self, path: str, json: dict, supplier_id: str, params=None):
+        return self._make_request(
+            requests.patch,
+            path,
+            json=json,
+            supplier_id=supplier_id,
+            params=params,
+            headers={"Content-Type": "application/json"},
+        )
+
+    def _http_delete(self, path: str, supplier_id: str, json: dict, params=None):
+        return self._make_request(
+            requests.delete,
+            path,
+            supplier_id=supplier_id,
+            json=json,
+            params=params,
+            headers={"Content-Type": "application/json"},
+        )
+
+    def get_supplier(self, supplier_id: str) -> models.Supplier:
+        response = self._http_get(f"suppliers/{supplier_id}", supplier_id=supplier_id)
+        try:
+            supplier = models.Supplier.from_dict(response, strict=self.strict)
+        except AttributeError as e:
+            raise exceptions.ApiError(response) from e
+        return supplier
 
     def get_suppliers(self) -> List[models.Supplier]:
-        '''
-        This list MAY be limited based on the suppliers that the authenticated user has been granted access to.
-        '''
-        response = self._http_get('suppliers')
+        response = self._http_get("suppliers")
         try:
-            self.suppliers = [models.Supplier.from_dict(supplier) for supplier in response]
-        except AttributeError:
-            raise exceptions.ApiError(response)
-        self.logger.info('Found %s suppliers', len(self.suppliers), extra={'suppliers': response})
-        self.supplier_url_map = {
-            supplier.id: supplier.endpoint for supplier in self.suppliers
-        }
-        return self.suppliers
+            suppliers = [
+                models.Supplier.from_dict(supplier, strict=self.strict) for supplier in response
+            ]
+        except AttributeError as e:
+            raise exceptions.ApiError(response) from e
+        self.logger.info("Found %s suppliers", len(suppliers), extra={"suppliers": response})
+        self.supplier_url_map = {supplier.id: supplier.endpoint for supplier in suppliers}
+        return suppliers
 
     def get_products(self, supplier_id: str) -> List[models.Product]:
-        '''
-        Contains all product details necessary to ingest, map, and sell.
-        '''
-        response = self._http_get(f'suppliers/{supplier_id}/products')
-        products = [models.Product.from_dict(product) for product in response]
-        self.logger.info('Found %s products', len(products), extra={'products': products})
+        response = self._http_get("products", supplier_id=supplier_id)
+        products = [models.Product.from_dict(product, strict=self.strict) for product in response]
+        self.logger.info("Found %s products", len(products), extra={"products": products})
         return products
+
+    def get_product(self, supplier_id: str, product_id: str) -> models.Product:
+        response = self._http_get(f"products/{product_id}", supplier_id=supplier_id)
+        return models.Product.from_dict(response, strict=self.strict)
+
+    def availability_check(
+        self,
+        supplier_id: str,
+        product_id: str,
+        option_id: str,
+        units: Optional[List[models.UnitQuantity]] = None,
+        local_date_start: Optional[date] = None,
+        local_date_end: Optional[date] = None,
+        local_date: Optional[date] = None,
+        availability_ids: Optional[List[str]] = None,
+    ) -> List[models.Availability]:
+        payload: Dict[str, Any] = {
+            "productId": product_id,
+            "optionId": option_id,
+        }
+        if any([local_date_start, local_date_end]) and not all([local_date_start, local_date_end]):
+            raise ValueError("local_date_start and local_date_end needs to be used together")
+        if local_date_start:
+            payload["localDateStart"] = local_date_start.isoformat()
+        if local_date_end:
+            payload["localDateEnd"] = local_date_end.isoformat()
+        if local_date:
+            payload["localDate"] = local_date.isoformat()
+        if availability_ids:
+            payload["availabilityIds"] = availability_ids
+        if units:
+            payload["units"] = [unit.as_dict() for unit in units]
+
+        response = self._http_post("availability", supplier_id=supplier_id, json=payload)
+        detailed_availability = [
+            models.Availability.from_dict(availability, strict=self.strict)
+            for availability in response
+        ]
+        self.logger.info("Found %s items", len(detailed_availability))
+        return detailed_availability
 
     def get_calendar(
         self,
         supplier_id: str,
         product_id: str,
         option_id: str,
-        start_date: date,
-        end_date: date,
-        extra_fields: dict = None,
+        local_date_start: date,
+        local_date_end: date,
+        availability_ids: Optional[List[str]] = None,
+        units: Optional[List[models.UnitQuantity]] = None,
     ) -> List[models.AvailabilityCalendarItem]:
-        '''
-        Returns an availability for given product and option.
-        '''
-        params = {
-            'productId': product_id,
-            'optionId': option_id,
-            'localDateStart': start_date.isoformat(),
-            'localDateEnd': end_date.isoformat(),
+        payload: Dict[str, Any] = {
+            "productId": product_id,
+            "optionId": option_id,
         }
-        if extra_fields:
-            params.update(extra_fields)
-        response = self._http_get(f'suppliers/{supplier_id}/availability/calendar', params=params)
-        daily_availability = [models.AvailabilityCalendarItem.from_dict(availability) for availability in response]
-        self.logger.info('Found %s days', len(daily_availability))
+        if local_date_start:
+            payload["localDateStart"] = local_date_start.isoformat()
+        if local_date_end:
+            payload["localDateEnd"] = local_date_end.isoformat()
+        if availability_ids:
+            payload["availabilityIds"] = availability_ids
+        if units:
+            payload["units"] = [unit.as_dict() for unit in units]
+
+        response = self._http_post("availability/calendar", supplier_id=supplier_id, json=payload)
+        daily_availability = [
+            models.AvailabilityCalendarItem.from_dict(availability, strict=self.strict)
+            for availability in response
+        ]
+        self.logger.info("Found %s days", len(daily_availability))
         return daily_availability
 
-    def get_availability(
-        self,
-        supplier_id: str,
-        product_id: str,
-        option_id: str,
-        start_date: date,
-        end_date: date,
-        extra_fields: dict = None,
-    ) -> List[models.AvailabilityItem]:
-        '''
-        For any dates which are never available for booking, the response MUST exclude those dates entirely.
-
-        If the product's availabilityType is OPENING_HOURS then the localDateTimeStart and localDateTimeEnd
-        are the hours of operation. If a product has more than one hours of operation on the same day
-        (e.g. the supplier is open 8-5 but closed for lunch from 12-1) then one availability object
-        MUST be returned for each contiguous range of time for that day.
-
-        The availability id value MUST be sent when making a Booking request.
-
-        The status field SHOULD be used to infer how frequently your cache should be updated from
-        the Booking Platform. The RECOMMENDED frequency is as follows:
-
-        FREESALE: Always available. Refresh no more than once/week.
-        AVAILABLE: Currently available for sale, but has a fixed capacity. Refresh every 12 hours.
-        LIMITED: Currently available for sale, but has a fixed capacity and may be sold out soon.
-                    Refresh at least once/hour.
-        SOLD_OUT: Currently sold out, but additional availability may free up. Refresh no more
-                    than once/hour.
-        CLOSED: Currently not available for sale, but not sold out (e.g. temporarily on stop-sell)
-                and may be available for sale soon. Refresh no more than once/12 hours.
-
-        '''
-        params = {
-            'productId': product_id,
-            'optionId': option_id,
-            'localDateStart': start_date.isoformat(),
-            'localDateEnd': end_date.isoformat(),
-        }
-        if extra_fields:
-            params.update(extra_fields)
-        response = self._http_get(f'suppliers/{supplier_id}/availability', params=params)
-        detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
-        self.logger.info('Found %s items', len(detailed_availability))
-        return detailed_availability
-
-    def test_availability(
-        self,
-        supplier_id: str,
-        product_id: str,
-        option_id: str,
-        availability_ids: List[str],
-        units: List[models.UnitQuantity],
-        extra_fields: dict = None,
-    ) -> List[models.AvailabilityItem]:
-        '''
-        This request is intended to provide the Booking Platform a complete view of the Unit IDs, Unit quantity,
-        and Availability IDs so that additional restrictions and policies can be validated within
-        the Booking Platform prior to making a Booking. The purpose is to provide a clear and accurate
-        answer to the Reseller about whether the requested booking configuration could be accepted by the Supplier.
-        This is to support complex booking requirements without the Reseller needing to know the details
-        of the restriction (e.g. "must purchase at least 1 adult ticket if a child ticket is purchased").
-        '''
-        json_data = {
-            'productId': product_id,
-            'optionId': option_id,
-            'availabilityIds': availability_ids,
-            'units': [unit.as_dict() for unit in units],
-        }
-        if extra_fields:
-            json_data.update(extra_fields)
-        response = self._http_post(f'suppliers/{supplier_id}/availability', json=json_data)
-        detailed_availability = [models.AvailabilityItem.from_dict(availability) for availability in response]
-        self.logger.info('Found %s items', len(detailed_availability))
-        return detailed_availability
-
-    def create_booking(
-        self,
-        supplier_id: str,
-        booking_request: models.BookingRequest,
-    ) -> models.Booking:
-        '''
-        This creates a new pending booking.
-
-        This call has to be idempotent. To be able to safely retry a call on any network error or timeout,
-        therefore it MUST not fail on retry or create a duplicate booking. The idempotency key is the UUID.
-        A supplier SHOULD verify that a retried request with the same UUID is matching the original booking data,
-        to avoid erroneous clients generating repeating UUIDs and response with the status 400
-        and ErrorCode 1005 in such case.
-        '''
-        response = self._http_post(f'suppliers/{supplier_id}/bookings', json=booking_request.as_dict())
-        self.logger.info('Booking created', extra={'booking': response})
-        return models.Booking.from_dict(response)
-
-    def confirm_booking(
+    def booking_reservation(
         self,
         supplier_id: str,
         uuid: str,
-        confirmation_request: models.BookingConfirmationRequest,
+        product_id: str,
+        option_id: str,
+        availability_id: str,
+        unit_items: List[models.UnitItem],
+        expiration_minutes: Optional[int] = None,
+        notes: Optional[str] = None,
     ) -> models.Booking:
-        '''
-        This confirms an in-progress booking. The utcHoldExpiration MUST NOT be elapsed when this request is sent,
-        otherwise the response MAY show a status of EXPIRED.
-
-        This call MUST be idempotent so that a Reseller may retry the request for any network error or timeout.
-        The Booking uuid MUST be used to ensure idempotency of the request.
-        '''
+        payload: Dict[str, Any] = {
+            "uuid": uuid,
+            "productId": product_id,
+            "optionId": option_id,
+            "availabilityId": availability_id,
+            "unitItems": [unit.as_dict() for unit in unit_items],
+        }
+        if expiration_minutes:
+            payload["expirationMinutes"] = expiration_minutes
+        if notes:
+            payload["notes"] = notes
         response = self._http_post(
-            f'suppliers/{supplier_id}/bookings/{uuid}/confirm',
-            json=confirmation_request.as_dict(),
+            "bookings",
+            supplier_id=supplier_id,
+            json=payload,
         )
-        self.logger.info('Booking confirmed', extra={'booking': response})
+        self.logger.info("Booking created", extra={"booking": response})
         return models.Booking.from_dict(response)
 
-    def get_booking_details(self, supplier_id: str, uuid: str) -> models.Booking:
-        '''
-        This returns the current state of any valid booking. This request MAY be made at any point after
-        the initial createBooking request is processed successfully and it MUST return the booking object.
-        '''
-        response = self._http_get(f'suppliers/{supplier_id}/bookings/{uuid}')
-        self.logger.info('Got booking details', extra={'booking': response})
+    def list_bookings(
+        self,
+        supplier_id: str,
+        reseller_reference: Optional[str] = None,
+        supplier_reference: Optional[str] = None,
+        local_date: Optional[date] = None,
+        local_date_start: Optional[date] = None,
+        local_date_end: Optional[date] = None,
+    ) -> List[models.Booking]:
+        if not any(
+            [reseller_reference, supplier_reference, local_date, local_date_start or local_date_end]
+        ):
+            raise ValueError("One of the query parameters has to be provided.")
+
+        if any([local_date_start, local_date_end]) and not all([local_date_start, local_date_end]):
+            raise ValueError("local_date_start and local_date_end needs to be used together")
+
+        params: Dict[str, str] = {}
+        if reseller_reference:
+            params["resellerReference"] = reseller_reference
+        elif supplier_reference:
+            params["supplierReference"] = supplier_reference
+        elif local_date:
+            params["localDate"] = local_date.isoformat()
+        elif local_date_start and local_date_end:
+            params["localDateStart"] = local_date_start.isoformat()
+            params["localDateEnd"] = local_date_end.isoformat()
+
+        response = self._http_get("bookings", supplier_id=supplier_id, params=params)
+        return [models.Booking.from_dict(booking) for booking in response]
+
+    def get_booking(self, supplier_id: str, uuid: str) -> models.Booking:
+        response = self._http_get(f"bookings/{uuid}", supplier_id=supplier_id)
         return models.Booking.from_dict(response)
 
-    def delete_booking(
+    def booking_confirmation(
         self,
         supplier_id: str,
         uuid: str,
-        reason: models.CancelReason,
-        reason_details: str,
-        extra_fields: dict = None,
+        email_receipt: bool = False,
+        reseller_reference: Optional[str] = None,
+        contact_full_name: Optional[str] = None,
+        contact_first_name: Optional[str] = None,
+        contact_last_name: Optional[str] = None,
+        contact_email_address: Optional[str] = None,
+        contact_phone_number: Optional[str] = None,
+        contact_locales: Optional[List[str]] = None,
+        contact_postal_code: Optional[str] = None,
+        contact_country: Optional[str] = None,
+        contact_notes: Optional[str] = None,
+        unit_items: Optional[List[models.ConfirmationUnitItem]] = None,
     ) -> models.Booking:
-        '''
-        This expires the availability hold of an in-progress booking so that the availablity is release
-        for other bookings. This request is a courtesy, however Resellers SHOULD send this in order
-        to ensure proper cleanup of any outstanding holds.
+        payload: Dict[str, Any] = {}
+        if email_receipt:
+            payload["emailReceipt"] = email_receipt
+        if reseller_reference:
+            payload["resellerReference"] = reseller_reference
+        if any(
+            [
+                contact_full_name,
+                contact_first_name,
+                contact_last_name,
+                contact_email_address,
+                contact_phone_number,
+                contact_locales,
+                contact_postal_code,
+                contact_country,
+                contact_notes,
+            ]
+        ):
+            payload["contact"] = models.BookingContact.from_dict(
+                {
+                    "locales": contact_locales or [],
+                    "fullName": contact_full_name,
+                    "firstName": contact_first_name,
+                    "lastName": contact_last_name,
+                    "emailAddress": contact_email_address,
+                    "phoneNumber": contact_phone_number,
+                    "postalCode": contact_postal_code,
+                    "country": contact_country,
+                    "notes": contact_notes,
+                }
+            ).as_dict()
+        if unit_items:
+            payload["unitItems"] = [unit_item.as_dict() for unit_item in unit_items]
 
-        This call has to be idempotent. To be able to safely retry a call on any network error or timeout,
-        therefore it MUST not fail on retry. The idempotency key is the UUID.
-        '''
-        json_data = {
-            'reason': reason.value,
-            'reasonDetails': reason_details,
-        }
-        if extra_fields:
-            json_data.update(extra_fields)
-        response = self._http_post(f'suppliers/{supplier_id}/bookings/{uuid}/cancel', json=json_data)
-        self.logger.info('Booking removed', extra={'booking': response})
+        response = self._http_post(
+            f"bookings/{uuid}/confirm", supplier_id=supplier_id, json=payload
+        )
+        return models.Booking.from_dict(response)
+
+    def extend_reservation(
+        self, supplier_id: str, uuid: str, expiration_minutes: int
+    ) -> models.Booking:
+        payload = {"expirationMinutes": expiration_minutes}
+        response = self._http_post(f"bookings/{uuid}/extend", supplier_id=supplier_id, json=payload)
+        return models.Booking.from_dict(response)
+
+    def booking_cancellation(
+        self,
+        supplier_id: str,
+        uuid: str,
+        reason: Optional[str] = None,
+        force: Optional[bool] = False,
+    ) -> models.Booking:
+        payload: Dict[str, Any] = {}
+        if reason:
+            payload["reason"] = reason
+        if force:
+            payload["force"] = force
+        response = self._http_delete(f"bookings/{uuid}", supplier_id=supplier_id, json=payload)
+        return models.Booking.from_dict(response)
+
+    def booking_update(
+        self,
+        supplier_id: str,
+        uuid: str,
+        product_id: Optional[str] = None,
+        option_id: Optional[str] = None,
+        availability_id: Optional[str] = None,
+        notes: Optional[str] = None,
+        email_receipt: bool = False,
+        reseller_reference: Optional[str] = None,
+        contact_full_name: Optional[str] = None,
+        contact_first_name: Optional[str] = None,
+        contact_last_name: Optional[str] = None,
+        contact_email_address: Optional[str] = None,
+        contact_phone_number: Optional[str] = None,
+        contact_locales: Optional[List[str]] = None,
+        contact_postal_code: Optional[str] = None,
+        contact_country: Optional[str] = None,
+        contact_notes: Optional[str] = None,
+        unit_items: Optional[List[models.ConfirmationUnitItem]] = None,
+    ):
+        payload: Dict[str, Any] = {}
+        if product_id:
+            payload["productId"] = product_id
+        if option_id:
+            payload["optionId"] = option_id
+        if availability_id:
+            payload["availabilityId"] = availability_id
+        if notes:
+            payload["notes"] = notes
+        if email_receipt:
+            payload["emailReceipt"] = email_receipt
+        if reseller_reference:
+            payload["resellerReference"] = reseller_reference
+
+        if any(
+            [
+                contact_full_name,
+                contact_first_name,
+                contact_last_name,
+                contact_email_address,
+                contact_phone_number,
+                contact_locales,
+                contact_postal_code,
+                contact_country,
+                contact_notes,
+            ]
+        ):
+            payload["contact"] = {}
+            if contact_locales:
+                payload["contact"]["locales"] = contact_locales or []
+            if contact_full_name:
+                payload["contact"]["fullName"] = contact_full_name
+            if contact_first_name:
+                payload["contact"]["firstName"] = contact_first_name
+            if contact_last_name:
+                payload["contact"]["lastName"] = contact_last_name
+            if contact_email_address:
+                payload["contact"]["emailAddress"] = contact_email_address
+            if contact_phone_number:
+                payload["contact"]["phoneNumber"] = contact_phone_number
+            if contact_postal_code:
+                payload["contact"]["postalCode"] = contact_postal_code
+            if contact_country:
+                payload["contact"]["country"] = contact_country
+            if contact_notes:
+                payload["contact"]["notes"] = contact_notes
+
+        if unit_items:
+            payload["unitItems"] = [unit_item.as_dict() for unit_item in unit_items]
+
+        response = self._http_patch(f"bookings/{uuid}", supplier_id=supplier_id, json=payload)
         return models.Booking.from_dict(response)

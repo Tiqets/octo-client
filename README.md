@@ -1,8 +1,10 @@
-# OCTo API client
+# OCTO API client
 
-Python HTTP client for OCTo (Open Connection for Tourism) APIs.
+Python HTTP client for OCTO (Open Connection for Tourism) APIs.
 
 More info at [octospec.com](https://octospec.com/)
+
+API Specification: https://docs.octo.travel/docs/octo/r6gduoa5ah5ne-octo-api
 
 ## Installation
 
@@ -16,23 +18,19 @@ More info at [octospec.com](https://octospec.com/)
 
 ### Getting started
 
-    $ virtualenv venv _--python=python3.7
-    $ . venv/bin/activate
-    $ python setup.py develop
+    $ pip install poetry
+    $ poetry install
 
-### Running tests
+### Running tests and linters
 
-Install requirements:
+To run linters:
 
-    $ pip install -e '.[tests]'
+    $ poetry run ruff octo_client
+    $ poetry run mypy octo_client
 
-To run all linters and tests:
+To run tests:
 
-    $ tox
-
-If you want to run a specific test
-
-    $ pytest -k test_name
+    $ poetry run pytest
 
 
 ## Usage

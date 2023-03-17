@@ -1,0 +1,13 @@
+[
+    {
+        "id": "48b4d2e9-cd8b-4ac2-a5ee-4217bf2622d2",
+        "name": "John Doe's company",
+        "endpoint": "http://fake-api.local",
+        "contact": {
+            "website": null,
+            "email": "john.doe@email.com",
+            "telephone": null,
+            "address": null
+        }
+    }
+]

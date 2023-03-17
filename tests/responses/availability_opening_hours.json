@@ -1,0 +1,20 @@
+[
+    {
+        "id": "2022-06-30T00:00:00+01:00",
+        "localDateTimeStart": "2022-06-30T00:00:00+01:00",
+        "localDateTimeEnd": "2022-07-01T00:00:00+01:00",
+        "allDay": true,
+        "available": true,
+        "status": "FREESALE",
+        "vacancies": null,
+        "capacity": null,
+        "maxUnits": null,
+        "utcCutoffAt": "2022-06-29T22:00:00Z",
+        "openingHours": [
+            {
+                "from": "09:00",
+                "to": "17:00"
+            }
+        ]
+    }
+]

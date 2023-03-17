@@ -1,3 +1,6 @@
+import json
+import os
+
 import pytest
 import responses
 
@@ -10,21 +13,18 @@ def mocked_responses():
         yield rsps
 
 
+def load_json_response(filename: str):
+    """
+    Loading JSON file located in the responses folder.
+    """
+    base_dir = os.path.dirname(__file__)
+    file_path = os.path.join(base_dir, "responses", filename)
+    with open(file_path) as json_file:
+        return json.load(json_file)
+
+
 @pytest.fixture
 def client(mocked_responses):
-    mocked_responses.add(responses.GET, 'http://fake-api.local/suppliers', json=[
-        {
-            'id': '0001',
-            'name': 'Acme Tour Co.',
-            'endpoint': 'https://api.my-booking-platform.com/v1',
-            'contact': {
-                'website': 'https://acme-tours.co.fake',
-                'email': 'info@acme-tours.co.fake',
-                'telephone': '+1 888-555-1212',
-                'address': '123 Main St, Anytown USA',
-                'country': 'US',
-            },
-            'timezone': 'EST',
-        }
-    ])
-    return OctoClient('http://fake-api.local', 'bar')
+    suppliers_response = load_json_response("suppliers.json")
+    mocked_responses.add(responses.GET, "http://fake-api.local/suppliers", json=suppliers_response)
+    return OctoClient("http://fake-api.local", "secret-token")
