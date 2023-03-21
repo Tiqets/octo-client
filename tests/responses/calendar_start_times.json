@@ -1,0 +1,26 @@
+[
+    {
+        "localDate": "2022-06-14",
+        "available": true,
+        "status": "AVAILABLE",
+        "vacancies": 20,
+        "capacity": 20,
+        "openingHours": []
+    },
+    {
+        "localDate": "2022-06-15",
+        "available": true,
+        "status": "AVAILABLE",
+        "vacancies": 10,
+        "capacity": 10,
+        "openingHours": []
+    },
+    {
+        "localDate": "2022-06-16",
+        "available": true,
+        "status": "AVAILABLE",
+        "vacancies": 10,
+        "capacity": 10,
+        "openingHours": []
+    }
+]

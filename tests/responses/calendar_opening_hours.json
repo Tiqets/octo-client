@@ -1,0 +1,41 @@
+[
+    {
+        "localDate": "2022-06-14",
+        "available": true,
+        "status": "FREESALE",
+        "vacancies": null,
+        "capacity": null,
+        "openingHours": [
+            {
+                "from": "09:00",
+                "to": "17:00"
+            }
+        ]
+    },
+    {
+        "localDate": "2022-06-15",
+        "available": true,
+        "status": "FREESALE",
+        "vacancies": null,
+        "capacity": null,
+        "openingHours": [
+            {
+                "from": "09:00",
+                "to": "17:00"
+            }
+        ]
+    },
+    {
+        "localDate": "2022-06-16",
+        "available": true,
+        "status": "FREESALE",
+        "vacancies": null,
+        "capacity": null,
+        "openingHours": [
+            {
+                "from": "09:00",
+                "to": "17:00"
+            }
+        ]
+    }
+]

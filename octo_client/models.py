@@ -1,63 +1,49 @@
-from dataclasses import asdict, dataclass, field, fields
-from datetime import date, datetime
-from enum import Enum
+from dataclasses import asdict, dataclass, field
+from datetime import date, datetime, time
 from typing import List, Optional
 
-import attr
-from tonalite import Config, from_dict
+from tonalite.config import Config
+from tonalite.core import from_dict
+
+from octo_client import const
 
 
 @dataclass
-@attr.s(auto_attribs=True)
 class BaseModel:
-
-    # extra_fields: Optional[dict] = field(default_factory=dict)
-    # ^ this field cannot be inherited by other models due to a python bug
-    # with ordering fields that have any default value and the ones that do not
-    # "error: Attributes without a default cannot follow attributes with one"
-    # https://bugs.python.org/issue36077
-    # Workaround: adding this field at the end of every model
-
     @staticmethod
     def _datetime_from_iso_format(datetime_str: Optional[str]) -> Optional[datetime]:
         if datetime_str:
-            return datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+            return datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
         return None
 
     def as_dict(self) -> dict:
         """
         Dumps dataclass into dictionary.
         """
-        model_as_dict = asdict(self)
-        model_as_dict.update(model_as_dict.pop('extra_fields'))
-        return model_as_dict
+        return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict, config=None):
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
         """
         Populating data class from a dictionary with strict type checking.
         """
         if config is None:
-            config = Config(strict=True, type_hooks={
-                date: date.fromisoformat,
-                datetime: cls._datetime_from_iso_format,
-            })
-
-        extra_fields = set(data.keys()).difference([f.name for f in fields(cls)])
-        data['extra_fields'] = {}
-        for extra_field in extra_fields:
-            data['extra_fields'][extra_field] = data.pop(extra_field)
+            config = Config(
+                strict=strict,
+                type_hooks={
+                    date: date.fromisoformat,
+                    datetime: cls._datetime_from_iso_format,
+                },
+            )
         return from_dict(cls, data=data, config=config)
 
 
 @dataclass
 class SupplierContact(BaseModel):
-    email: str
-    address: Optional[str] = None
-    telephone: Optional[str] = None
-    description: Optional[str] = None
     website: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    email: Optional[str] = None
+    telephone: Optional[str] = None
+    address: Optional[str] = None
 
 
 @dataclass
@@ -66,7 +52,6 @@ class Supplier(BaseModel):
     name: str
     endpoint: str
     contact: SupplierContact
-    extra_fields: Optional[dict] = field(default_factory=dict)
 
 
 @dataclass
@@ -74,25 +59,76 @@ class Capability(BaseModel):
     id: str
     revision: int
     required: bool
-    extra_fields: Optional[dict] = field(default_factory=dict)
+
+
+@dataclass
+class UnitRestrictions(BaseModel):
+    minAge: int
+    maxAge: int
+    idRequired: bool
+    paxCount: int
+    accompaniedBy: List[str] = field(default_factory=list)
+    minQuantity: Optional[int] = None
+    maxQuantity: Optional[int] = None
 
 
 @dataclass
 class Unit(BaseModel):
     id: str
     internalName: str
-    type: str
+    type: const.UnitType
+    restrictions: UnitRestrictions
+    requiredContactFields: List[const.RequiredContactField] = field(default_factory=list)
     reference: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                cast=[
+                    const.UnitType,
+                    const.RequiredContactField,
+                ],
+            ),
+        )
+
+
+@dataclass
+class OptionRestriction(BaseModel):
+    minUnits: Optional[int] = None
+    maxUnits: Optional[int] = None
 
 
 @dataclass
 class Option(BaseModel):
     id: str
+    default: bool
     internalName: str
-    units: List[Unit]
+    cancellationCutoff: str
+    cancellationCutoffAmount: int
+    cancellationCutoffUnit: const.CancellationCutoffUnit
+    restrictions: OptionRestriction
     reference: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    availabilityLocalStartTimes: List[str] = field(default_factory=list)
+    requiredContactFields: List[const.RequiredContactField] = field(default_factory=list)
+    units: List[Unit] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                cast=[
+                    const.CancellationCutoffUnit,
+                    const.RequiredContactField,
+                ],
+            ),
+        )
 
 
 @dataclass
@@ -101,61 +137,74 @@ class Product(BaseModel):
     internalName: str
     locale: str
     timeZone: str
+    allowFreesale: bool
     instantConfirmation: bool
     instantDelivery: bool
-    availabilityType: str
-    deliveryFormats: List[str]
-    deliveryMethods: List[str]
-    redemptionMethod: str
+    availabilityRequired: bool
+    availabilityType: const.AvailabilityType
+    redemptionMethod: const.RedemptionMethod
     options: List[Option]
-    capabilities: List[Capability] = field(default_factory=list)
+    deliveryFormats: List[const.DeliveryFormat] = field(default_factory=list)
+    deliveryMethods: List[const.DeliveryMethod] = field(default_factory=list)
     reference: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                cast=[
+                    const.AvailabilityType,
+                    const.RedemptionMethod,
+                    const.DeliveryFormat,
+                    const.DeliveryMethod,
+                ],
+            ),
+        )
+
+
+@dataclass
+class OpeningHours(BaseModel):
+    from_: time
+    to: time
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        # renaming the keyword
+        data["from_"] = data.pop("from")
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(strict=strict, type_hooks={time: time.fromisoformat}),
+        )
 
 
 @dataclass
 class AvailabilityCalendarItem(BaseModel):
     localDate: date
-    status: str
+    available: bool
+    status: const.AvailabilityStatus
     vacancies: Optional[int] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    capacity: Optional[int] = None
+    openingHours: List[OpeningHours] = field(default_factory=list)
 
-
-@dataclass
-class AvailabilityItem(BaseModel):
-    id: str
-    localDateTimeStart: datetime
-    localDateTimeEnd: datetime
-    status: str
-    vacancies: Optional[int] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
-
-
-@dataclass
-class UnitItem(BaseModel):
-    uuid: str
-    unitId: str
-    resellerReference: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
-
-
-@dataclass
-class UnitQuantity(BaseModel):
-    unitId: str
-    quantity: int
-    extra_fields: Optional[dict] = field(default_factory=dict)
-
-
-@dataclass
-class BookingRequest(BaseModel):
-    uuid: str
-    productId: str
-    optionId: str
-    availabilityId: str
-    unitItems: List[UnitItem]
-    holdExpirationMinutes: Optional[int] = None
-    resellerReference: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                type_hooks={
+                    date: date.fromisoformat,
+                },
+                cast=[
+                    const.AvailabilityStatus,
+                ],
+            ),
+        )
 
 
 @dataclass
@@ -163,52 +212,134 @@ class Availability(BaseModel):
     id: str
     localDateTimeStart: datetime
     localDateTimeEnd: datetime
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    allDay: bool
+    available: bool
+    status: const.AvailabilityStatus
+    utcCutoffAt: datetime
+    openingHours: List[OpeningHours] = field(default_factory=list)
+    vacancies: Optional[int] = None
+    capacity: Optional[int] = None
+    maxUnits: Optional[int] = None
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                type_hooks={
+                    datetime: cls._datetime_from_iso_format,
+                },
+                cast=[
+                    const.AvailabilityStatus,
+                ],
+            ),
+        )
 
 
 @dataclass
-class Contact(BaseModel):
-    locales: List[str]
+class UnitItem(BaseModel):
+    unitId: str
+    uuid: Optional[str] = None
+
+
+@dataclass
+class BookingContact(BaseModel):
+    locales: List[str] = field(default_factory=list)
     fullName: Optional[str] = None
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
     emailAddress: Optional[str] = None
     phoneNumber: Optional[str] = None
+    postalCode: Optional[str] = None
     country: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    notes: Optional[str] = None
+
+
+@dataclass
+class ConfirmationUnitItem(BaseModel):
+    unitId: str
+    uuid: Optional[str] = None
+    resellerReference: Optional[str] = None
+    contact: Optional[BookingContact] = None
+
+
+@dataclass
+class UnitQuantity(BaseModel):
+    id: str
+    quantity: int
 
 
 @dataclass
 class DeliveryOption(BaseModel):
-    deliveryFormat: str
+    deliveryFormat: const.DeliveryFormat
     deliveryValue: str
-    extra_fields: Optional[dict] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                cast=[
+                    const.DeliveryFormat,
+                ],
+            ),
+        )
 
 
 @dataclass
 class Ticket(BaseModel):
-    deliveryOptions: List[DeliveryOption]
-    redemptionMethod: str
-    utcDeliveredAt: Optional[datetime] = None
+    redemptionMethod: const.RedemptionMethod
     utcRedeemedAt: Optional[datetime] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    deliveryOptions: List[DeliveryOption] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                type_hooks={
+                    datetime: cls._datetime_from_iso_format,
+                },
+                cast=[
+                    const.RedemptionMethod,
+                ],
+            ),
+        )
 
 
 @dataclass
-class BookingTicket(BaseModel):
-    deliveryOptions: List[DeliveryOption]
-    redemptionMethod: str
-    utcDeliveredAt: Optional[datetime] = None
-    utcRedeemedAt: Optional[datetime] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
-
-
-@dataclass
-class UnitItemTicket(BaseModel):
+class BookingUnitItem(BaseModel):
     uuid: str
     unitId: str
-    ticket: Optional[BookingTicket] = None
+    unit: Unit
+    status: const.BookingStatus
+    contact: BookingContact
     resellerReference: Optional[str] = None
     supplierReference: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    utcRedeemedAt: Optional[datetime] = None
+    ticket: Optional[Ticket] = None
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                type_hooks={
+                    datetime: cls._datetime_from_iso_format,
+                },
+                cast=[
+                    const.BookingStatus,
+                ],
+            ),
+        )
 
 
 @dataclass
@@ -221,49 +352,94 @@ class CancellationRequest(BaseModel):
     utcHoldExpiration: Optional[datetime] = None
     utcConfirmedAt: Optional[datetime] = None
     utcResolvedAt: Optional[datetime] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+
+
+@dataclass
+class Cancellation(BaseModel):
+    refund: const.Refund
+    reason: Optional[str] = None
+    utcCancelledAt = datetime
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                type_hooks={
+                    datetime: cls._datetime_from_iso_format,
+                },
+                cast=[
+                    const.Refund,
+                ],
+            ),
+        )
+
+
+@dataclass
+class BookingAvailability(BaseModel):
+    id: str
+    localDateTimeStart: datetime
+    localDateTimeEnd: datetime
+    allDay: bool
+    openingHours: List[OpeningHours] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                type_hooks={
+                    datetime: cls._datetime_from_iso_format,
+                },
+            ),
+        )
 
 
 @dataclass
 class Booking(BaseModel):
+    id: str
     uuid: str
-    status: str
+    testMode: bool
+    status: const.BookingStatus
     productId: str
+    product: Product
     optionId: str
-    availability: Availability
-    deliveryMethods: List[str]
-    unitItems: List[UnitItemTicket]
-    contact: Optional[Contact] = None
-    utcHoldExpiration: Optional[datetime] = None
-    utcConfirmedAt: Optional[datetime] = None
-    utcDeliveredAt: Optional[datetime] = None
+    option: Option
+    cancellable: bool
+    freesale: bool
+    availabilityId: str
+    availability: BookingAvailability
+    contact: BookingContact
+    notes: Optional[str] = None
+    voucher: Optional[Ticket] = None
     resellerReference: Optional[str] = None
     supplierReference: Optional[str] = None
-    refreshFrequency: Optional[str] = None
-    voucher: Optional[Ticket] = None
-    cancellationRequest: Optional[CancellationRequest] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
+    utcCreatedAt: Optional[datetime] = None
+    utcUpdatedAt: Optional[datetime] = None
+    utcExpiresAt: Optional[datetime] = None
+    utcRedeemedAt: Optional[datetime] = None
+    utcConfirmedAt: Optional[datetime] = None
+    cancellation: Optional[Cancellation] = None
+    deliveryMethods: List[const.DeliveryMethod] = field(default_factory=list)
+    unitItems: List[BookingUnitItem] = field(default_factory=list)
 
-
-@dataclass
-class BookingConfirmationRequest(BaseModel):
-    contact: Contact
-    resellerReference: Optional[str] = None
-    extra_fields: Optional[dict] = field(default_factory=dict)
-
-
-class CancelReason(Enum):
-    # is the most common and indicates that the customer requested the cancellation
-    CUSTOMER = 'CUSTOMER'
-
-    # indicates that the supplier requested the cancellation
-    # (possibly due to bad weather or other unexpected circumstances)
-    SUPPLIER = 'SUPPLIER'
-
-    # indicates that the booking cancellation is being requested by the Reseller
-    # because it has been determined the booking was fraudulent
-    FRAUD = 'FRAUD'
-
-    # indicates that the cancellation reason does not fall into one of these categories.
-    # This SHOULD be used only in rare circumstances
-    OTHER = 'OTHER'
+    @classmethod
+    def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
+        return from_dict(
+            data_class=cls,
+            data=data,
+            config=Config(
+                strict=strict,
+                type_hooks={
+                    datetime: cls._datetime_from_iso_format,
+                },
+                cast=[
+                    const.BookingStatus,
+                    const.DeliveryMethod,
+                ],
+            ),
+        )

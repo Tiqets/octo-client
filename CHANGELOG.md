@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- Updating the client to the current OCTO version (v1.0)
+
 ## 1.0.4
 
 - Fix for logging when receiving a non-JSON response
