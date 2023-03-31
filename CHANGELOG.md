@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Support alternative values for the `UnitType` Enum.
+- Support alternative values for the `RequiredContactField` Enum.
+- (bug fix) Make sure that we always return a single supplier if the response of the `suppliers/:id` endpoint is list.
+
 ## 1.1.0
 
 - Updating the client to the current OCTO version (v1.0)
