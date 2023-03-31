@@ -82,7 +82,7 @@ class Unit(BaseModel):
     reference: Optional[str] = None
 
     @classmethod
-    def _map_unknown_unit_type_values(cls, field_value: str) -> str:
+    def _map_unknown_unit_type_values(cls, field_value: str) -> const.UnitType:
         if field_value.lower() not in [x.value.lower() for x in const.UnitType]:
             return const.UnitType.OTHER
         return const.UnitType(field_value)

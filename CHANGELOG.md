@@ -2,7 +2,7 @@
 
 ## 1.1.1
 
-- Support alternative values for the `UnitType` Enum.
+- Convert unknown values for `UnitType` `Enum` to `UnitType.OTHER`.
 - Support alternative values for the `RequiredContactField` Enum.
 
 ## 1.1.0
