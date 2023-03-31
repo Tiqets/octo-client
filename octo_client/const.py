@@ -15,6 +15,7 @@ class UnitType(Enum):
     ADULTS = "ADULTS"  # ZAUI ONLY
     STUDENTS = "STUDENTS"  # ZAUI ONLY
     CHILDREN = "CHILDREN"  # ZAUI ONLY
+    INFANTS = "INFANT"  # ZAUI ONLY
 
 
 class RequiredContactField(Enum):
