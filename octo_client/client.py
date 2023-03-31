@@ -164,8 +164,6 @@ class OctoClient(object):
     def get_supplier(self, supplier_id: str) -> models.Supplier:
         response = self._http_get(f"suppliers/{supplier_id}", supplier_id=supplier_id)
         try:
-            if isinstance(response, list):
-                response = response[0]
             supplier = models.Supplier.from_dict(response, strict=self.strict)
         except AttributeError as e:
             raise exceptions.ApiError(response) from e
