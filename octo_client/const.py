@@ -11,11 +11,6 @@ class UnitType(Enum):
     STUDENT = "STUDENT"
     MILITARY = "MILITARY"
     OTHER = "OTHER"
-    SENIORS = "SENIORS"  # ZAUI ONLY
-    ADULTS = "ADULTS"  # ZAUI ONLY
-    STUDENTS = "STUDENTS"  # ZAUI ONLY
-    CHILDREN = "CHILDREN"  # ZAUI ONLY
-    INFANTS = "INFANT"  # ZAUI ONLY
 
 
 class RequiredContactField(Enum):

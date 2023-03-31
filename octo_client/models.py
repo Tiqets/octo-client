@@ -82,6 +82,12 @@ class Unit(BaseModel):
     reference: Optional[str] = None
 
     @classmethod
+    def _map_unknown_unit_type_values(cls, field_value: str) -> str:
+        if field_value.lower() not in [x.value.lower() for x in const.UnitType]:
+            return const.UnitType.OTHER
+        return const.UnitType(field_value)
+
+    @classmethod
     def from_dict(cls, data: dict, config: Optional[Config] = None, strict: bool = False):
         return from_dict(
             data_class=cls,
@@ -92,6 +98,7 @@ class Unit(BaseModel):
                     const.UnitType,
                     const.RequiredContactField,
                 ],
+                type_hooks={const.UnitType: cls._map_unknown_unit_type_values},
             ),
         )
 
