@@ -1,7 +1,16 @@
 from enum import Enum
 
 
-class UnitType(Enum):
+class EnumWithMissing(Enum):
+    @classmethod
+    def _missing_(cls, value):
+        for member in cls:
+            if member.value == value:
+                return member
+        return cls.OTHER
+
+
+class UnitType(EnumWithMissing):
     ADULT = "ADULT"
     YOUTH = "YOUTH"
     CHILD = "CHILD"
@@ -35,11 +44,11 @@ class AvailabilityType(Enum):
     OPENING_HOURS = "OPENING_HOURS"
 
 
-class DeliveryFormat(Enum):
+class DeliveryFormat(EnumWithMissing):
     PDF_URL = "PDF_URL"
     QRCODE = "QRCODE"
-    PKPASS_URL = "PKPASS_URL"  # VENTRATA ONLY
-    CODE128 = "CODE128"  # VENTRATA ONLY
+    CODE128 = "CODE128"
+    OTHER = "OTHER"
 
 
 class DeliveryMethod(Enum):
