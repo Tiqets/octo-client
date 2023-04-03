@@ -13,6 +13,14 @@ from octo_client.models import Unit
     "input_unity_type_value, expected_value", [
         ("CHILDREN", UnitType.OTHER),
         (UnitType.OTHER.value, UnitType.OTHER),
+        (UnitType.ADULT.value, UnitType.ADULT),
+        (UnitType.YOUTH.value, UnitType.YOUTH),
+        (UnitType.CHILD.value, UnitType.CHILD),
+        (UnitType.INFANT.value, UnitType.INFANT),
+        (UnitType.FAMILY.value, UnitType.FAMILY),
+        (UnitType.SENIOR.value, UnitType.SENIOR),
+        (UnitType.STUDENT.value, UnitType.STUDENT),
+        (UnitType.MILITARY.value, UnitType.MILITARY),
     ]
 )
 def test_map_unknown_unit_type(input_unity_type_value: str, expected_value: UnitType):
@@ -43,6 +51,8 @@ def test_map_unknown_unit_type(input_unity_type_value: str, expected_value: Unit
     "input_delivery_format_value, expected_value", [
         ("PKPASS_URL", DeliveryFormat.OTHER),
         (DeliveryFormat.CODE128.value, DeliveryFormat.CODE128),
+        (DeliveryFormat.QRCODE.value, DeliveryFormat.QRCODE),
+        (DeliveryFormat.PDF_URL.value, DeliveryFormat.PDF_URL),
     ]
 )
 def test_map_unknown_delivery_format(input_delivery_format_value: str, expected_value: DeliveryFormat):

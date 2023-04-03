@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class EnumWithMissing(Enum):
+    """An Enum class that overrides the `_missing_()` method to return the class' OTHER member."""
     @classmethod
     def _missing_(cls, value):
         for member in cls:
