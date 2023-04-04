@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1
+
+- Convert unknown values for `UnitType` `Enum` to `UnitType.OTHER`.
+- Convert unknown values for `DeliveryFormat` `Enum` to `DeliveryFormat.OTHER`.
+- Deprecate `DeliveryFormat.PKPASS_URL` and replace it by `DeliveryFormat.OTHER`.
+- Support alternative values for the `RequiredContactField` Enum.
+
 ## 1.1.0
 
 - Updating the client to the current OCTO version (v1.0)
