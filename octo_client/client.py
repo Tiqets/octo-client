@@ -259,9 +259,23 @@ class OctoClient(object):
         option_id: str,
         local_date_start: date,
         local_date_end: date,
-        availability_ids: Optional[List[str]] = None,
         units: Optional[List[models.UnitQuantity]] = None,
     ) -> List[models.AvailabilityCalendarItem]:
+        """This method retrieve the availability calendar for a range of dates.
+
+        Args:
+            supplier_id: retrieve calendar data for the supplier with this ID.
+            product_id: retrieve calendar data for a product with this ID.
+            option_id: retrieve calendar data for the option with this ID.
+            local_date_start: retrieve calendar data from this date onwards.
+            local_date_end: retrieve calendar data until this date.
+            units: a list of units. Each unit requires:
+                - id
+                - quantity
+
+        Returns: a list of availability objects; one object per each day in the range of dates.
+        """
+
         payload: Dict[str, Any] = {
             "productId": product_id,
             "optionId": option_id,
@@ -270,8 +284,6 @@ class OctoClient(object):
             payload["localDateStart"] = local_date_start.isoformat()
         if local_date_end:
             payload["localDateEnd"] = local_date_end.isoformat()
-        if availability_ids:
-            payload["availabilityIds"] = availability_ids
         if units:
             payload["units"] = [unit.as_dict() for unit in units]
 
