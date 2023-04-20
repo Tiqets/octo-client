@@ -59,6 +59,35 @@ class OctoClient(object):
         if status_code in CODE_EXCEPTION_MAP:
             raise CODE_EXCEPTION_MAP[status_code](response_text)
 
+    def _build_endpoint_url_for_request(self, supplier_id: str, path: str) -> str:
+        """Builds the endpoint's URL for making requests to a given supplier.
+
+        Args:
+            supplier_id: builds the URL for a supplier with this ID.
+            path: use this path to build the URL.
+
+        Returns: the full URL.
+        Raises:
+            - `exceptions.InvalidRequest` if the supplier ID is unknown.
+
+        """
+
+        if supplier_id not in self.supplier_url_map:
+            self.get_suppliers()
+
+        try:
+            endpoint_url = self.supplier_url_map[supplier_id]
+        except KeyError as e:
+            raise exceptions.InvalidRequest("Incorrect supplierId") from e
+
+        cleaned_endpoint = endpoint_url.rstrip("/")
+
+        return (
+            cleaned_endpoint
+            if cleaned_endpoint.endswith(path)
+            else f"{cleaned_endpoint}/{path}"
+        )
+
     def _make_request(
         self,
         http_method: Callable,
@@ -70,16 +99,12 @@ class OctoClient(object):
     ):
         if headers is None:
             headers = {}
+
         if supplier_id:
-            if supplier_id not in self.supplier_url_map:
-                self.get_suppliers()
-            try:
-                endpoint_url = self.supplier_url_map[supplier_id]
-            except KeyError as e:
-                raise exceptions.InvalidRequest("Incorrect supplierId") from e
-            full_url = f"{endpoint_url}/{path}"
+            full_url: str = self._build_endpoint_url_for_request(str(supplier_id), path)
         else:
             full_url = f"{self.url}/{path}"
+
         self.logger.log(
             self.requests_loglevel,
             "Sending request to %s (%s)",

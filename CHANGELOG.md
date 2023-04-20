@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- Update the client to add a function to build the endpoint's URL for requests to a given supplier.
+
 ## 1.1.1
 
 - Convert unknown values for `UnitType` `Enum` to `UnitType.OTHER`.

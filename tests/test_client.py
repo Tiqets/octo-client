@@ -137,11 +137,7 @@ def test_get_products(client: OctoClient, mocked_responses):
 def test_get_product(client: OctoClient, mocked_responses):
     # GIVEN
     products_response = load_json_response("product.json")
-    mocked_responses.add(
-        responses.GET,
-        "http://fake-api.local/products/6b903d44-dc24-4ca4-ae71-6bde6c4f4854",
-        json=products_response,
-    )
+    mocked_responses.add(responses.GET, "http://fake-api.local/products/6b903d44-dc24-4ca4-ae71-6bde6c4f4854", json=products_response)
 
     # WHEN
     response = client.get_product(
@@ -212,9 +208,7 @@ def test_get_product(client: OctoClient, mocked_responses):
 def test_availability_opening_hours(client: OctoClient, mocked_responses):
     # GIVEN
     availability_response = load_json_response("availability_opening_hours.json")
-    mocked_responses.add(
-        responses.POST, "http://fake-api.local/availability", json=availability_response
-    )
+    mocked_responses.add(responses.POST, "http://fake-api.local/availability", json=availability_response)
 
     # WHEN
     response = client.availability_check(
@@ -256,9 +250,7 @@ def test_availability_opening_hours(client: OctoClient, mocked_responses):
 def test_availability_start_times(client: OctoClient, mocked_responses):
     # GIVEN
     availability_response = load_json_response("availability_start_times.json")
-    mocked_responses.add(
-        responses.POST, "http://fake-api.local/availability", json=availability_response
-    )
+    mocked_responses.add(responses.POST, "http://fake-api.local/availability", json=availability_response)
 
     # WHEN
     response = client.availability_check(
@@ -315,9 +307,7 @@ def test_availability_start_times(client: OctoClient, mocked_responses):
 def test_calendar_opening_hours(client: OctoClient, mocked_responses):
     # GIVEN
     availability_response = load_json_response("calendar_opening_hours.json")
-    mocked_responses.add(
-        responses.POST, "http://fake-api.local/availability/calendar", json=availability_response
-    )
+    mocked_responses.add(responses.POST, "http://fake-api.local/availability/calendar", json=availability_response)
 
     # WHEN
     response = client.get_calendar(
@@ -368,9 +358,7 @@ def test_calendar_opening_hours(client: OctoClient, mocked_responses):
 def test_calendar_start_times(client: OctoClient, mocked_responses):
     # GIVEN
     availability_response = load_json_response("calendar_start_times.json")
-    mocked_responses.add(
-        responses.POST, "http://fake-api.local/availability/calendar", json=availability_response
-    )
+    mocked_responses.add(responses.POST, "http://fake-api.local/availability/calendar", json=availability_response)
 
     # WHEN
     response = client.get_calendar(
@@ -421,9 +409,7 @@ def test_calendar_start_times(client: OctoClient, mocked_responses):
 def test_reservation(client: OctoClient, mocked_responses):
     # GIVEN
     reservation_response = load_json_response("reservation.json")
-    mocked_responses.add(
-        responses.POST, "http://fake-api.local/bookings", json=reservation_response
-    )
+    mocked_responses.add(responses.POST, "http://fake-api.local/bookings", json=reservation_response)
 
     # WHEN
     response = client.booking_reservation(
