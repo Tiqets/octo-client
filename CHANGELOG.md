@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- Update the `get_calendar` method to remove the parameter `availability_ids`.
+
 ## 1.1.2
 
 - Update the client to add a function to build the endpoint's URL for requests to a given supplier.
