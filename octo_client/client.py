@@ -62,10 +62,14 @@ class OctoClient(object):
     def _build_endpoint_url_for_request(self, supplier_id: str, path: str) -> str:
         """Builds the endpoint's URL for making requests to a given supplier.
 
-        :param supplier_id: the ID of a supplier.
-        :param path: the path of the request's URL
-        :return the full URL.
-        :raise `exceptions.InvalidRequest` if the supplier ID is unknown.
+        Args:
+            supplier_id: builds the URL for a supplier with this ID.
+            path: use this path to build the URL.
+
+        Returns: the full URL.
+        Raises:
+            - `exceptions.InvalidRequest` if the supplier ID is unknown.
+
         """
 
         if supplier_id not in self.supplier_url_map:
@@ -79,7 +83,7 @@ class OctoClient(object):
         cleaned_endpoint = endpoint_url.rstrip("/")
 
         return (
-            endpoint_url
+            cleaned_endpoint
             if cleaned_endpoint.endswith(path)
             else f"{cleaned_endpoint}/{path}"
         )
