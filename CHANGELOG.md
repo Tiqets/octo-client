@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.4
+
+- add flag to log requests
+
 ## 1.1.3
 
 - Update the `get_calendar` method to remove the parameter `availability_ids`.

@@ -44,6 +44,7 @@ class OctoClient(object):
         self.supplier_url_map: Dict[str, str] = {}
         self.requests_loglevel = requests_loglevel
         self.log_responses = False
+        self.log_requests = False
         self.log_size_limit = log_size_limit
         self.language = language
         self.strict = strict
@@ -100,22 +101,29 @@ class OctoClient(object):
         if headers is None:
             headers = {}
 
-        if supplier_id:
-            full_url: str = self._build_endpoint_url_for_request(str(supplier_id), path)
-        else:
-            full_url = f"{self.url}/{path}"
+        if params is None:
+            params = {}
+
+        full_url: str = (
+            self._build_endpoint_url_for_request(str(supplier_id), path)
+            if supplier_id
+            else f"{self.url}/{path}"
+        )
+
+        request_log_data: dict = {"json": json, "params": params}
 
         self.logger.log(
             self.requests_loglevel,
             "Sending request to %s (%s)",
             full_url,
             http_method.__name__.upper(),
+            extra={"request": self._filter_request_log_data(len(str(request_log_data)), request_log_data)},
         )
         base_headers = self._get_headers()
         headers = {**base_headers, **headers}
         response = http_method(
             full_url,
-            params=params or {},
+            params=params,
             json=json,
             headers=headers,
         )
@@ -138,8 +146,17 @@ class OctoClient(object):
         )
         return response_json
 
+    def _filter_request_log_data(
+            self, data_length: int, content: Union[str, dict]
+    ) -> Optional[Union[str, dict]]:
+        if self.log_requests:
+            if self.log_size_limit and data_length > self.log_size_limit:
+                return "TRUNCATED"
+            return content
+        return None
+
     def _filter_log_data(
-        self, response_length: int, response_content: Union[str, dict]
+            self, response_length: int, response_content: Union[str, dict]
     ) -> Optional[Union[str, dict]]:
         if self.log_responses:
             if self.log_size_limit and response_length > self.log_size_limit:
