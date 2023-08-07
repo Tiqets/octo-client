@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import requests
 
 from octo_client import exceptions, models
+from octo_client.utils import hide_sensitive_data
 
 logger = logging.getLogger("octo_client")
 logger.setLevel(logging.INFO)
@@ -83,11 +84,7 @@ class OctoClient(object):
 
         cleaned_endpoint = endpoint_url.rstrip("/")
 
-        return (
-            cleaned_endpoint
-            if cleaned_endpoint.endswith(path)
-            else f"{cleaned_endpoint}/{path}"
-        )
+        return cleaned_endpoint if cleaned_endpoint.endswith(path) else f"{cleaned_endpoint}/{path}"
 
     def _make_request(
         self,
@@ -117,7 +114,11 @@ class OctoClient(object):
             "Sending request to %s (%s)",
             full_url,
             http_method.__name__.upper(),
-            extra={"request": self._filter_request_log_data(len(str(request_log_data)), request_log_data)},
+            extra={
+                "request": self._filter_request_log_data(
+                    len(str(request_log_data)), request_log_data
+                )
+            },
         )
         base_headers = self._get_headers()
         headers = {**base_headers, **headers}
@@ -147,18 +148,20 @@ class OctoClient(object):
         return response_json
 
     def _filter_request_log_data(
-            self, data_length: int, content: Union[str, dict]
+        self, data_length: int, content: Union[str, dict]
     ) -> Optional[Union[str, dict]]:
         if self.log_requests:
+            content = hide_sensitive_data(content)
             if self.log_size_limit and data_length > self.log_size_limit:
                 return "TRUNCATED"
             return content
         return None
 
     def _filter_log_data(
-            self, response_length: int, response_content: Union[str, dict]
+        self, response_length: int, response_content: Union[str, dict]
     ) -> Optional[Union[str, dict]]:
         if self.log_responses:
+            response_content = hide_sensitive_data(response_content)
             if self.log_size_limit and response_length > self.log_size_limit:
                 return "TRUNCATED"
             return response_content
@@ -528,3 +531,7 @@ class OctoClient(object):
 
         response = self._http_patch(f"bookings/{uuid}", supplier_id=supplier_id, json=payload)
         return models.Booking.from_dict(response)
+
+
+def test_hide_sensitive_data():
+    pass
