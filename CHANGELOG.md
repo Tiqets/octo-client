@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.5
+
+- update client methods to accept a `headers` parameter to forward HTTP request headers.
+
 ## 1.1.4
 
 - add flag to log requests
