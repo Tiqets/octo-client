@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.5
+
+- Hide sensitive data in logs
+
 ## 1.1.4
 
 - add flag to log requests
