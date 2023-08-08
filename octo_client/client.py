@@ -1,3 +1,4 @@
+import copy
 import logging
 from datetime import date
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -148,10 +149,10 @@ class OctoClient(object):
         return response_json
 
     def _filter_request_log_data(
-        self, data_length: int, content: Union[str, dict]
+        self, data_length: int, request_content: Union[str, dict]
     ) -> Optional[Union[str, dict]]:
         if self.log_requests:
-            content = hide_sensitive_data(content)
+            content = hide_sensitive_data(copy.deepcopy(request_content))
             if self.log_size_limit and data_length > self.log_size_limit:
                 return "TRUNCATED"
             return content
@@ -161,10 +162,10 @@ class OctoClient(object):
         self, response_length: int, response_content: Union[str, dict]
     ) -> Optional[Union[str, dict]]:
         if self.log_responses:
-            response_content = hide_sensitive_data(response_content)
+            content = hide_sensitive_data(copy.deepcopy(response_content))
             if self.log_size_limit and response_length > self.log_size_limit:
                 return "TRUNCATED"
-            return response_content
+            return content
         return None
 
     def _get_headers(self) -> Dict[str, str]:
@@ -531,7 +532,3 @@ class OctoClient(object):
 
         response = self._http_patch(f"bookings/{uuid}", supplier_id=supplier_id, json=payload)
         return models.Booking.from_dict(response)
-
-
-def test_hide_sensitive_data():
-    pass
