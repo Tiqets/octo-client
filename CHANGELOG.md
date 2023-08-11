@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.6
+
+- upgrade `certifi` to version `2023.7.22`
+
 ## 1.1.5
 
 - update client methods to accept a `headers` parameter to forward HTTP request headers.
