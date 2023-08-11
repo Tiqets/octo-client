@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.5
+
+- upgrade `certifi` to version `2023.7.22`
+
 ## 1.1.4
 
 - add flag to log requests
