@@ -94,9 +94,9 @@ class OctoClient(object):
         http_method: Callable,
         path: str,
         supplier_id=None,
-        json=None,
+        json: Optional[Dict] = None,
         params=None,
-        headers=None,
+        headers: Optional[Dict] = None,
     ):
         if headers is None:
             headers = {}
@@ -170,49 +170,55 @@ class OctoClient(object):
             "Accept-Language": self.language,
         }
 
-    def _http_get(self, path: str, supplier_id: Optional[str] = None, params=None):
-        return self._make_request(requests.get, path, supplier_id=supplier_id, params=params)
+    def _http_get(self, path: str, supplier_id: Optional[str] = None, params=None, headers: Optional[Dict] = None):
+        return self._make_request(requests.get, path, supplier_id=supplier_id, params=params, headers=headers)
 
-    def _http_post(self, path: str, json: dict, supplier_id: str, params=None):
+    def _http_post(self, path: str, json: dict, supplier_id: str, params=None, headers: Optional[Dict] = None):
+        if headers is None:
+            headers = {}
         return self._make_request(
             requests.post,
             path,
             json=json,
             supplier_id=supplier_id,
             params=params,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", **headers},
         )
 
-    def _http_patch(self, path: str, json: dict, supplier_id: str, params=None):
+    def _http_patch(self, path: str, json: dict, supplier_id: str, params=None, headers: Optional[Dict] = None):
+        if headers is None:
+            headers = {}
         return self._make_request(
             requests.patch,
             path,
             json=json,
             supplier_id=supplier_id,
             params=params,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", **headers},
         )
 
-    def _http_delete(self, path: str, supplier_id: str, json: dict, params=None):
+    def _http_delete(self, path: str, supplier_id: str, json: dict, params=None, headers: Optional[Dict] = None):
+        if headers is None:
+            headers = {}
         return self._make_request(
             requests.delete,
             path,
             supplier_id=supplier_id,
             json=json,
             params=params,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", **headers},
         )
 
-    def get_supplier(self, supplier_id: str) -> models.Supplier:
-        response = self._http_get(f"suppliers/{supplier_id}", supplier_id=supplier_id)
+    def get_supplier(self, supplier_id: str, headers: Optional[Dict] = None) -> models.Supplier:
+        response = self._http_get(f"suppliers/{supplier_id}", supplier_id=supplier_id, headers=headers)
         try:
             supplier = models.Supplier.from_dict(response, strict=self.strict)
         except AttributeError as e:
             raise exceptions.ApiError(response) from e
         return supplier
 
-    def get_suppliers(self) -> List[models.Supplier]:
-        response = self._http_get("suppliers")
+    def get_suppliers(self, headers: Optional[Dict] = None) -> List[models.Supplier]:
+        response = self._http_get("suppliers", headers=headers)
         try:
             suppliers = [
                 models.Supplier.from_dict(supplier, strict=self.strict) for supplier in response
@@ -223,14 +229,14 @@ class OctoClient(object):
         self.supplier_url_map = {supplier.id: supplier.endpoint for supplier in suppliers}
         return suppliers
 
-    def get_products(self, supplier_id: str) -> List[models.Product]:
-        response = self._http_get("products", supplier_id=supplier_id)
+    def get_products(self, supplier_id: str, headers: Optional[Dict] = None) -> List[models.Product]:
+        response = self._http_get("products", supplier_id=supplier_id, headers=headers)
         products = [models.Product.from_dict(product, strict=self.strict) for product in response]
         self.logger.info("Found %s products", len(products), extra={"products": products})
         return products
 
-    def get_product(self, supplier_id: str, product_id: str) -> models.Product:
-        response = self._http_get(f"products/{product_id}", supplier_id=supplier_id)
+    def get_product(self, supplier_id: str, product_id: str, headers: Optional[Dict] = None) -> models.Product:
+        response = self._http_get(f"products/{product_id}", supplier_id=supplier_id, headers=headers)
         return models.Product.from_dict(response, strict=self.strict)
 
     def availability_check(
@@ -243,6 +249,7 @@ class OctoClient(object):
         local_date_end: Optional[date] = None,
         local_date: Optional[date] = None,
         availability_ids: Optional[List[str]] = None,
+        headers: Optional[Dict] = None
     ) -> List[models.Availability]:
         payload: Dict[str, Any] = {
             "productId": product_id,
@@ -261,7 +268,7 @@ class OctoClient(object):
         if units:
             payload["units"] = [unit.as_dict() for unit in units]
 
-        response = self._http_post("availability", supplier_id=supplier_id, json=payload)
+        response = self._http_post("availability", supplier_id=supplier_id, json=payload, headers=headers)
         detailed_availability = [
             models.Availability.from_dict(availability, strict=self.strict)
             for availability in response
@@ -277,6 +284,7 @@ class OctoClient(object):
         local_date_start: date,
         local_date_end: date,
         units: Optional[List[models.UnitQuantity]] = None,
+        headers: Optional[Dict] = None,
     ) -> List[models.AvailabilityCalendarItem]:
         """This method retrieve the availability calendar for a range of dates.
 
@@ -289,6 +297,7 @@ class OctoClient(object):
             units: a list of units. Each unit requires:
                 - id
                 - quantity
+            headers: optional HTTP headers to send in the request.
 
         Returns: a list of availability objects; one object per each day in the range of dates.
         """
@@ -304,7 +313,7 @@ class OctoClient(object):
         if units:
             payload["units"] = [unit.as_dict() for unit in units]
 
-        response = self._http_post("availability/calendar", supplier_id=supplier_id, json=payload)
+        response = self._http_post("availability/calendar", supplier_id=supplier_id, json=payload, headers=headers)
         daily_availability = [
             models.AvailabilityCalendarItem.from_dict(availability, strict=self.strict)
             for availability in response
@@ -322,6 +331,7 @@ class OctoClient(object):
         unit_items: List[models.UnitItem],
         expiration_minutes: Optional[int] = None,
         notes: Optional[str] = None,
+        headers: Optional[Dict] = None,
     ) -> models.Booking:
         payload: Dict[str, Any] = {
             "uuid": uuid,
@@ -338,6 +348,7 @@ class OctoClient(object):
             "bookings",
             supplier_id=supplier_id,
             json=payload,
+            headers=headers,
         )
         self.logger.info("Booking created", extra={"booking": response})
         return models.Booking.from_dict(response)
@@ -350,6 +361,7 @@ class OctoClient(object):
         local_date: Optional[date] = None,
         local_date_start: Optional[date] = None,
         local_date_end: Optional[date] = None,
+        headers: Optional[Dict] = None,
     ) -> List[models.Booking]:
         if not any(
             [reseller_reference, supplier_reference, local_date, local_date_start or local_date_end]
@@ -370,11 +382,11 @@ class OctoClient(object):
             params["localDateStart"] = local_date_start.isoformat()
             params["localDateEnd"] = local_date_end.isoformat()
 
-        response = self._http_get("bookings", supplier_id=supplier_id, params=params)
+        response = self._http_get("bookings", supplier_id=supplier_id, params=params, headers=headers)
         return [models.Booking.from_dict(booking) for booking in response]
 
-    def get_booking(self, supplier_id: str, uuid: str) -> models.Booking:
-        response = self._http_get(f"bookings/{uuid}", supplier_id=supplier_id)
+    def get_booking(self, supplier_id: str, uuid: str, headers: Optional[Dict] = None,) -> models.Booking:
+        response = self._http_get(f"bookings/{uuid}", supplier_id=supplier_id, headers=headers)
         return models.Booking.from_dict(response)
 
     def booking_confirmation(
@@ -393,6 +405,7 @@ class OctoClient(object):
         contact_country: Optional[str] = None,
         contact_notes: Optional[str] = None,
         unit_items: Optional[List[models.ConfirmationUnitItem]] = None,
+        headers: Optional[Dict] = None,
     ) -> models.Booking:
         payload: Dict[str, Any] = {}
         if email_receipt:
@@ -429,15 +442,15 @@ class OctoClient(object):
             payload["unitItems"] = [unit_item.as_dict() for unit_item in unit_items]
 
         response = self._http_post(
-            f"bookings/{uuid}/confirm", supplier_id=supplier_id, json=payload
+            f"bookings/{uuid}/confirm", supplier_id=supplier_id, json=payload, headers=headers
         )
         return models.Booking.from_dict(response)
 
     def extend_reservation(
-        self, supplier_id: str, uuid: str, expiration_minutes: int
+        self, supplier_id: str, uuid: str, expiration_minutes: int, headers: Optional[Dict] = None,
     ) -> models.Booking:
         payload = {"expirationMinutes": expiration_minutes}
-        response = self._http_post(f"bookings/{uuid}/extend", supplier_id=supplier_id, json=payload)
+        response = self._http_post(f"bookings/{uuid}/extend", supplier_id=supplier_id, json=payload, headers=headers)
         return models.Booking.from_dict(response)
 
     def booking_cancellation(
@@ -446,13 +459,14 @@ class OctoClient(object):
         uuid: str,
         reason: Optional[str] = None,
         force: Optional[bool] = False,
+        headers: Optional[Dict] = None,
     ) -> models.Booking:
         payload: Dict[str, Any] = {}
         if reason:
             payload["reason"] = reason
         if force:
             payload["force"] = force
-        response = self._http_delete(f"bookings/{uuid}", supplier_id=supplier_id, json=payload)
+        response = self._http_delete(f"bookings/{uuid}", supplier_id=supplier_id, json=payload, headers=headers)
         return models.Booking.from_dict(response)
 
     def booking_update(
@@ -475,6 +489,7 @@ class OctoClient(object):
         contact_country: Optional[str] = None,
         contact_notes: Optional[str] = None,
         unit_items: Optional[List[models.ConfirmationUnitItem]] = None,
+        headers: Optional[Dict] = None,
     ):
         payload: Dict[str, Any] = {}
         if product_id:
@@ -526,5 +541,5 @@ class OctoClient(object):
         if unit_items:
             payload["unitItems"] = [unit_item.as_dict() for unit_item in unit_items]
 
-        response = self._http_patch(f"bookings/{uuid}", supplier_id=supplier_id, json=payload)
+        response = self._http_patch(f"bookings/{uuid}", supplier_id=supplier_id, json=payload, headers=headers)
         return models.Booking.from_dict(response)

@@ -1,5 +1,8 @@
 from datetime import date, datetime, time, timedelta, timezone
+from typing import Dict
+from typing import Optional
 
+import pytest
 import responses
 
 from octo_client import OctoClient, const
@@ -8,9 +11,16 @@ from octo_client import models as m
 from .conftest import load_json_response
 
 
-def test_get_suppliers(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_get_suppliers(
+        client: OctoClient,
+        mocked_responses,
+        custom_header: Optional[Dict],
+):
     # WHEN
-    suppliers = client.get_suppliers()
+    suppliers = client.get_suppliers(headers=custom_header)
 
     # THEN
     assert suppliers == [
@@ -30,9 +40,15 @@ def test_get_suppliers(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[0].request.url == "http://fake-api.local/suppliers"
     assert mocked_responses.calls[0].request.headers["Authorization"] == "Bearer secret-token"
     assert mocked_responses.calls[0].request.body is None
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[0].request.headers.get(header_name) == header_value
 
 
-def test_get_supplier(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_get_supplier(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     supplier_response = load_json_response("supplier.json")
     mocked_responses.add(
@@ -42,7 +58,7 @@ def test_get_supplier(client: OctoClient, mocked_responses):
     )
 
     # WHEN
-    response = client.get_supplier("48b4d2e9-cd8b-4ac2-a5ee-4217bf2622d2")
+    response = client.get_supplier("48b4d2e9-cd8b-4ac2-a5ee-4217bf2622d2", headers=custom_header)
 
     # THEN
     assert response == m.Supplier(
@@ -64,15 +80,21 @@ def test_get_supplier(client: OctoClient, mocked_responses):
     )
     assert mocked_responses.calls[1].request.headers["Authorization"] == "Bearer secret-token"
     assert mocked_responses.calls[1].request.body is None
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[1].request.headers.get(header_name) == header_value
 
 
-def test_get_products(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_get_products(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     products_response = load_json_response("products.json")
     mocked_responses.add(responses.GET, "http://fake-api.local/products", json=products_response)
 
     # WHEN
-    response = client.get_products("48b4d2e9-cd8b-4ac2-a5ee-4217bf2622d2")
+    response = client.get_products("48b4d2e9-cd8b-4ac2-a5ee-4217bf2622d2", headers=custom_header)
 
     # THEN
     assert response == [
@@ -131,17 +153,23 @@ def test_get_products(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[0].request.url == "http://fake-api.local/suppliers"
     assert mocked_responses.calls[1].request.url == "http://fake-api.local/products"
     assert mocked_responses.calls[1].request.headers["Authorization"] == "Bearer secret-token"
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[1].request.headers.get(header_name) == header_value
     assert mocked_responses.calls[1].request.body is None
 
 
-def test_get_product(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_get_product(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     products_response = load_json_response("product.json")
     mocked_responses.add(responses.GET, "http://fake-api.local/products/6b903d44-dc24-4ca4-ae71-6bde6c4f4854", json=products_response)
 
     # WHEN
     response = client.get_product(
-        "48b4d2e9-cd8b-4ac2-a5ee-4217bf2622d2", "6b903d44-dc24-4ca4-ae71-6bde6c4f4854"
+        "48b4d2e9-cd8b-4ac2-a5ee-4217bf2622d2", "6b903d44-dc24-4ca4-ae71-6bde6c4f4854", headers=custom_header
     )
 
     # THEN
@@ -202,10 +230,16 @@ def test_get_product(client: OctoClient, mocked_responses):
         == "http://fake-api.local/products/6b903d44-dc24-4ca4-ae71-6bde6c4f4854"
     )
     assert mocked_responses.calls[1].request.headers["Authorization"] == "Bearer secret-token"
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[1].request.headers.get(header_name) == header_value
     assert mocked_responses.calls[1].request.body is None
 
 
-def test_availability_opening_hours(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_availability_opening_hours(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     availability_response = load_json_response("availability_opening_hours.json")
     mocked_responses.add(responses.POST, "http://fake-api.local/availability", json=availability_response)
@@ -217,6 +251,7 @@ def test_availability_opening_hours(client: OctoClient, mocked_responses):
         option_id="DEFAULT",
         local_date_start=date(2022, 6, 25),
         local_date_end=date(2022, 6, 30),
+        headers=custom_header,
     )
 
     # THEN
@@ -244,10 +279,16 @@ def test_availability_opening_hours(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[0].request.url == "http://fake-api.local/suppliers"
     assert mocked_responses.calls[1].request.url == "http://fake-api.local/availability"
     assert mocked_responses.calls[1].request.headers["Authorization"] == "Bearer secret-token"
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[1].request.headers.get(header_name) == header_value
     assert mocked_responses.calls[1].request.body
 
 
-def test_availability_start_times(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_availability_start_times(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     availability_response = load_json_response("availability_start_times.json")
     mocked_responses.add(responses.POST, "http://fake-api.local/availability", json=availability_response)
@@ -259,6 +300,7 @@ def test_availability_start_times(client: OctoClient, mocked_responses):
         option_id="DEFAULT",
         local_date_start=date(2022, 6, 25),
         local_date_end=date(2022, 6, 30),
+        headers=custom_header,
     )
 
     # THEN
@@ -301,10 +343,16 @@ def test_availability_start_times(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[0].request.url == "http://fake-api.local/suppliers"
     assert mocked_responses.calls[1].request.url == "http://fake-api.local/availability"
     assert mocked_responses.calls[1].request.headers["Authorization"] == "Bearer secret-token"
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[1].request.headers.get(header_name) == header_value
     assert mocked_responses.calls[1].request.body
 
 
-def test_calendar_opening_hours(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_calendar_opening_hours(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     availability_response = load_json_response("calendar_opening_hours.json")
     mocked_responses.add(responses.POST, "http://fake-api.local/availability/calendar", json=availability_response)
@@ -316,6 +364,7 @@ def test_calendar_opening_hours(client: OctoClient, mocked_responses):
         option_id="DEFAULT",
         local_date_start=date(2022, 6, 10),
         local_date_end=date(2022, 6, 20),
+        headers=custom_header,
     )
 
     # THEN
@@ -352,10 +401,16 @@ def test_calendar_opening_hours(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[0].request.url == "http://fake-api.local/suppliers"
     assert mocked_responses.calls[1].request.url == "http://fake-api.local/availability/calendar"
     assert mocked_responses.calls[1].request.headers["Authorization"] == "Bearer secret-token"
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[1].request.headers.get(header_name) == header_value
     assert mocked_responses.calls[1].request.body
 
 
-def test_calendar_start_times(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_calendar_start_times(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     availability_response = load_json_response("calendar_start_times.json")
     mocked_responses.add(responses.POST, "http://fake-api.local/availability/calendar", json=availability_response)
@@ -367,6 +422,7 @@ def test_calendar_start_times(client: OctoClient, mocked_responses):
         option_id="DEFAULT",
         local_date_start=date(2022, 6, 10),
         local_date_end=date(2022, 6, 20),
+        headers=custom_header,
     )
 
     # THEN
@@ -406,7 +462,10 @@ def test_calendar_start_times(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[1].request.body
 
 
-def test_reservation(client: OctoClient, mocked_responses):
+@pytest.mark.parametrize(
+    "custom_header", [{"Header-A": "test"}, None]
+)
+def test_reservation(client: OctoClient, mocked_responses, custom_header: Optional[Dict]):
     # GIVEN
     reservation_response = load_json_response("reservation.json")
     mocked_responses.add(responses.POST, "http://fake-api.local/bookings", json=reservation_response)
@@ -424,6 +483,7 @@ def test_reservation(client: OctoClient, mocked_responses):
                 unitId="youth_f6446706-885a-437c-8461-efd6d7080910",
             )
         ],
+        headers=custom_header,
     )
 
     # THEN
@@ -612,4 +672,7 @@ def test_reservation(client: OctoClient, mocked_responses):
     assert mocked_responses.calls[0].request.url == "http://fake-api.local/suppliers"
     assert mocked_responses.calls[1].request.url == "http://fake-api.local/bookings"
     assert mocked_responses.calls[1].request.headers["Authorization"] == "Bearer secret-token"
+    if custom_header:
+        for header_name, header_value in custom_header.items():
+            assert mocked_responses.calls[1].request.headers.get(header_name) == header_value
     assert mocked_responses.calls[1].request.body
