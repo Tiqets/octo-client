@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.5
+## 1.1.6
 
 - upgrade `certifi` to version `2023.7.22`
 
