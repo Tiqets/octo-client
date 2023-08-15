@@ -1,8 +1,24 @@
 from enum import Enum
 
+PRIVATE_DATA_REPLACEMENT = "[Filtered private data]"
+PRIVATE_DATA_KEYS = [
+    "name",
+    "email",
+    "phone",
+    "mobile",
+    "phone",
+    "address",
+    "street",
+    "city",
+    "zip",
+    "country",
+    "state",
+]
+
 
 class EnumWithMissing(Enum):
     """An Enum class that overrides the `_missing_()` method to return the class' OTHER member."""
+
     @classmethod
     def _missing_(cls, value):
         for member in cls:

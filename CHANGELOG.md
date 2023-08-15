@@ -1,12 +1,16 @@
 # Changelog
 
+## 1.1.6
+
+- Fix client displaying sensitive data in logs
+
 ## 1.1.5
 
-- update client methods to accept a `headers` parameter to forward HTTP request headers.
+- Update client methods to accept a `headers` parameter to forward HTTP request headers.
 
 ## 1.1.4
 
-- add flag to log requests
+- Add flag to log requests
 
 ## 1.1.3
 

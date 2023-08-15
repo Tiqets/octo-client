@@ -1,3 +1,4 @@
+import copy
 import logging
 from datetime import date
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -5,6 +6,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import requests
 
 from octo_client import exceptions, models
+from octo_client.utils import hide_sensitive_data
 
 logger = logging.getLogger("octo_client")
 logger.setLevel(logging.INFO)
@@ -83,11 +85,7 @@ class OctoClient(object):
 
         cleaned_endpoint = endpoint_url.rstrip("/")
 
-        return (
-            cleaned_endpoint
-            if cleaned_endpoint.endswith(path)
-            else f"{cleaned_endpoint}/{path}"
-        )
+        return cleaned_endpoint if cleaned_endpoint.endswith(path) else f"{cleaned_endpoint}/{path}"
 
     def _make_request(
         self,
@@ -117,7 +115,7 @@ class OctoClient(object):
             "Sending request to %s (%s)",
             full_url,
             http_method.__name__.upper(),
-            extra={"request": self._filter_request_log_data(len(str(request_log_data)), request_log_data)},
+            extra={"request": self._filter_request_log_data(request_log_data)},
         )
         base_headers = self._get_headers()
         headers = {**base_headers, **headers}
@@ -134,7 +132,7 @@ class OctoClient(object):
             self.logger.log(
                 self.requests_loglevel,
                 "Received non-JSON response",
-                extra={"response": self._filter_log_data(len(response.text), response.text)},
+                extra={"response": self._filter_response_log_data(response.text)},
             )
             raise exceptions.ApiError("Non-JSON response") from exc
         self.logger.log(
@@ -142,26 +140,28 @@ class OctoClient(object):
             "Got response from %s (%s)",
             full_url,
             http_method.__name__.upper(),
-            extra={"response": self._filter_log_data(len(response.text), response_json)},
+            extra={"response": self._filter_response_log_data(response_json)},
         )
         return response_json
 
     def _filter_request_log_data(
-            self, data_length: int, content: Union[str, dict]
+        self, request_content: Union[str, dict]
     ) -> Optional[Union[str, dict]]:
         if self.log_requests:
-            if self.log_size_limit and data_length > self.log_size_limit:
+            content = hide_sensitive_data(copy.deepcopy(request_content))
+            if self.log_size_limit and len(content) > self.log_size_limit:
                 return "TRUNCATED"
             return content
         return None
 
-    def _filter_log_data(
-            self, response_length: int, response_content: Union[str, dict]
+    def _filter_response_log_data(
+        self, response_content: Union[str, dict]
     ) -> Optional[Union[str, dict]]:
         if self.log_responses:
-            if self.log_size_limit and response_length > self.log_size_limit:
+            content = hide_sensitive_data(copy.deepcopy(response_content))
+            if self.log_size_limit and len(content) > self.log_size_limit:
                 return "TRUNCATED"
-            return response_content
+            return content
         return None
 
     def _get_headers(self) -> Dict[str, str]:
@@ -170,10 +170,20 @@ class OctoClient(object):
             "Accept-Language": self.language,
         }
 
-    def _http_get(self, path: str, supplier_id: Optional[str] = None, params=None, headers: Optional[Dict] = None):
-        return self._make_request(requests.get, path, supplier_id=supplier_id, params=params, headers=headers)
+    def _http_get(
+        self,
+        path: str,
+        supplier_id: Optional[str] = None,
+        params=None,
+        headers: Optional[Dict] = None,
+    ):
+        return self._make_request(
+            requests.get, path, supplier_id=supplier_id, params=params, headers=headers
+        )
 
-    def _http_post(self, path: str, json: dict, supplier_id: str, params=None, headers: Optional[Dict] = None):
+    def _http_post(
+        self, path: str, json: dict, supplier_id: str, params=None, headers: Optional[Dict] = None
+    ):
         if headers is None:
             headers = {}
         return self._make_request(
@@ -185,7 +195,9 @@ class OctoClient(object):
             headers={"Content-Type": "application/json", **headers},
         )
 
-    def _http_patch(self, path: str, json: dict, supplier_id: str, params=None, headers: Optional[Dict] = None):
+    def _http_patch(
+        self, path: str, json: dict, supplier_id: str, params=None, headers: Optional[Dict] = None
+    ):
         if headers is None:
             headers = {}
         return self._make_request(
@@ -197,7 +209,9 @@ class OctoClient(object):
             headers={"Content-Type": "application/json", **headers},
         )
 
-    def _http_delete(self, path: str, supplier_id: str, json: dict, params=None, headers: Optional[Dict] = None):
+    def _http_delete(
+        self, path: str, supplier_id: str, json: dict, params=None, headers: Optional[Dict] = None
+    ):
         if headers is None:
             headers = {}
         return self._make_request(
@@ -210,7 +224,9 @@ class OctoClient(object):
         )
 
     def get_supplier(self, supplier_id: str, headers: Optional[Dict] = None) -> models.Supplier:
-        response = self._http_get(f"suppliers/{supplier_id}", supplier_id=supplier_id, headers=headers)
+        response = self._http_get(
+            f"suppliers/{supplier_id}", supplier_id=supplier_id, headers=headers
+        )
         try:
             supplier = models.Supplier.from_dict(response, strict=self.strict)
         except AttributeError as e:
@@ -229,14 +245,20 @@ class OctoClient(object):
         self.supplier_url_map = {supplier.id: supplier.endpoint for supplier in suppliers}
         return suppliers
 
-    def get_products(self, supplier_id: str, headers: Optional[Dict] = None) -> List[models.Product]:
+    def get_products(
+        self, supplier_id: str, headers: Optional[Dict] = None
+    ) -> List[models.Product]:
         response = self._http_get("products", supplier_id=supplier_id, headers=headers)
         products = [models.Product.from_dict(product, strict=self.strict) for product in response]
         self.logger.info("Found %s products", len(products), extra={"products": products})
         return products
 
-    def get_product(self, supplier_id: str, product_id: str, headers: Optional[Dict] = None) -> models.Product:
-        response = self._http_get(f"products/{product_id}", supplier_id=supplier_id, headers=headers)
+    def get_product(
+        self, supplier_id: str, product_id: str, headers: Optional[Dict] = None
+    ) -> models.Product:
+        response = self._http_get(
+            f"products/{product_id}", supplier_id=supplier_id, headers=headers
+        )
         return models.Product.from_dict(response, strict=self.strict)
 
     def availability_check(
@@ -249,7 +271,7 @@ class OctoClient(object):
         local_date_end: Optional[date] = None,
         local_date: Optional[date] = None,
         availability_ids: Optional[List[str]] = None,
-        headers: Optional[Dict] = None
+        headers: Optional[Dict] = None,
     ) -> List[models.Availability]:
         payload: Dict[str, Any] = {
             "productId": product_id,
@@ -268,7 +290,9 @@ class OctoClient(object):
         if units:
             payload["units"] = [unit.as_dict() for unit in units]
 
-        response = self._http_post("availability", supplier_id=supplier_id, json=payload, headers=headers)
+        response = self._http_post(
+            "availability", supplier_id=supplier_id, json=payload, headers=headers
+        )
         detailed_availability = [
             models.Availability.from_dict(availability, strict=self.strict)
             for availability in response
@@ -313,7 +337,9 @@ class OctoClient(object):
         if units:
             payload["units"] = [unit.as_dict() for unit in units]
 
-        response = self._http_post("availability/calendar", supplier_id=supplier_id, json=payload, headers=headers)
+        response = self._http_post(
+            "availability/calendar", supplier_id=supplier_id, json=payload, headers=headers
+        )
         daily_availability = [
             models.AvailabilityCalendarItem.from_dict(availability, strict=self.strict)
             for availability in response
@@ -382,10 +408,17 @@ class OctoClient(object):
             params["localDateStart"] = local_date_start.isoformat()
             params["localDateEnd"] = local_date_end.isoformat()
 
-        response = self._http_get("bookings", supplier_id=supplier_id, params=params, headers=headers)
+        response = self._http_get(
+            "bookings", supplier_id=supplier_id, params=params, headers=headers
+        )
         return [models.Booking.from_dict(booking) for booking in response]
 
-    def get_booking(self, supplier_id: str, uuid: str, headers: Optional[Dict] = None,) -> models.Booking:
+    def get_booking(
+        self,
+        supplier_id: str,
+        uuid: str,
+        headers: Optional[Dict] = None,
+    ) -> models.Booking:
         response = self._http_get(f"bookings/{uuid}", supplier_id=supplier_id, headers=headers)
         return models.Booking.from_dict(response)
 
@@ -447,10 +480,16 @@ class OctoClient(object):
         return models.Booking.from_dict(response)
 
     def extend_reservation(
-        self, supplier_id: str, uuid: str, expiration_minutes: int, headers: Optional[Dict] = None,
+        self,
+        supplier_id: str,
+        uuid: str,
+        expiration_minutes: int,
+        headers: Optional[Dict] = None,
     ) -> models.Booking:
         payload = {"expirationMinutes": expiration_minutes}
-        response = self._http_post(f"bookings/{uuid}/extend", supplier_id=supplier_id, json=payload, headers=headers)
+        response = self._http_post(
+            f"bookings/{uuid}/extend", supplier_id=supplier_id, json=payload, headers=headers
+        )
         return models.Booking.from_dict(response)
 
     def booking_cancellation(
@@ -466,7 +505,9 @@ class OctoClient(object):
             payload["reason"] = reason
         if force:
             payload["force"] = force
-        response = self._http_delete(f"bookings/{uuid}", supplier_id=supplier_id, json=payload, headers=headers)
+        response = self._http_delete(
+            f"bookings/{uuid}", supplier_id=supplier_id, json=payload, headers=headers
+        )
         return models.Booking.from_dict(response)
 
     def booking_update(
@@ -541,5 +582,7 @@ class OctoClient(object):
         if unit_items:
             payload["unitItems"] = [unit_item.as_dict() for unit_item in unit_items]
 
-        response = self._http_patch(f"bookings/{uuid}", supplier_id=supplier_id, json=payload, headers=headers)
+        response = self._http_patch(
+            f"bookings/{uuid}", supplier_id=supplier_id, json=payload, headers=headers
+        )
         return models.Booking.from_dict(response)
