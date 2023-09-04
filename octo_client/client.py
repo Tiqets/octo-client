@@ -127,7 +127,7 @@ class OctoClient(object):
         )
         self._raise_for_status(response.status_code, response.text)
         try:
-            response_json = response.json()
+            response_json: dict = response.json()
         except Exception as exc:
             self.logger.log(
                 self.requests_loglevel,
@@ -145,8 +145,8 @@ class OctoClient(object):
         return response_json
 
     def _filter_request_log_data(
-        self, request_content: Union[str, dict]
-    ) -> Optional[Union[str, dict]]:
+        self, request_content: Union[str, dict, list]
+    ) -> Optional[Union[str, dict, list]]:
         if self.log_requests:
             content = hide_sensitive_data(copy.deepcopy(request_content))
             if self.log_size_limit and len(content) > self.log_size_limit:
@@ -155,8 +155,8 @@ class OctoClient(object):
         return None
 
     def _filter_response_log_data(
-        self, response_content: Union[str, dict]
-    ) -> Optional[Union[str, dict]]:
+        self, response_content: Union[str, dict, list]
+    ) -> Optional[Union[str, dict, list]]:
         if self.log_responses:
             content = hide_sensitive_data(copy.deepcopy(response_content))
             if self.log_size_limit and len(content) > self.log_size_limit:
