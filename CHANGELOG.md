@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.7
+
+- Handle list data when hidding client sensitive data
+
 ## 1.1.6
 
 - Fix client displaying sensitive data in logs
